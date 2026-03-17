@@ -1,0 +1,392 @@
+/**
+ * Fleet Management – UI Enhancements
+ * Applied globally for a more polished, modern look.
+ */
+
+/* ========== Login & auth ========== */
+.page-wrapper .min-vh-100.text-bg-light {
+  background: linear-gradient(145deg, #f0f4f8 0%, #e2e8f0 50%, #cbd5e1 100%) !important;
+  position: relative;
+}
+.page-wrapper .min-vh-100.text-bg-light::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 80% 50% at 50% -20%, rgba(30, 77, 183, 0.08), transparent);
+  pointer-events: none;
+}
+.login-card-enhance .card {
+  border: none;
+  border-radius: 1rem;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(0, 0, 0, 0.04);
+  overflow: hidden;
+}
+.login-card-enhance .card-body {
+  padding: 2rem 2.25rem;
+}
+.login-card-enhance .form-control {
+  border-radius: 0.5rem;
+  border: 1px solid var(--bs-border-color);
+  padding: 0.65rem 1rem;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.login-card-enhance .form-control:focus {
+  border-color: var(--bs-primary);
+  box-shadow: 0 0 0 3px rgba(30, 77, 183, 0.15);
+}
+.login-card-enhance .btn-primary {
+  border-radius: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  font-weight: 600;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.login-card-enhance .btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(30, 77, 183, 0.4);
+}
+
+/* ========== App topstrip ========== */
+.app-topstrip {
+  background: linear-gradient(135deg, #1a365d 0%, #2c5282 50%, #1e4db7 100%) !important;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
+}
+.app-topstrip .text-white {
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+/* ========== Sidebar ========== */
+.left-sidebar {
+  box-shadow: 4px 0 24px rgba(0, 0, 0, 0.06);
+}
+.left-sidebar .sidebar-item .sidebar-link {
+  transition: background-color 0.15s, color 0.15s, padding-left 0.15s;
+}
+.left-sidebar .sidebar-item .sidebar-link:hover {
+  background-color: rgba(30, 77, 183, 0.08);
+  color: var(--bs-primary);
+}
+.left-sidebar .sidebar-item .sidebar-link.active,
+.left-sidebar .sidebar-item .sidebar-link[aria-expanded="true"] {
+  background-color: rgba(30, 77, 183, 0.12);
+  color: var(--bs-primary);
+  font-weight: 600;
+}
+.left-sidebar .nav-small-cap {
+  letter-spacing: 0.05em;
+  color: var(--bs-gray-600);
+}
+.left-sidebar .brand-logo .logo-img img {
+  transition: opacity 0.2s;
+}
+.left-sidebar .brand-logo .logo-img:hover img {
+  opacity: 0.9;
+}
+
+/* Sidebar toggle button (top right of sidebar) */
+.sidebar-toggle-btn {
+  opacity: 0.75;
+  transition: opacity 0.2s, background-color 0.2s;
+}
+.sidebar-toggle-btn:hover {
+  opacity: 1;
+  background-color: rgba(0, 0, 0, 0.06) !important;
+}
+.left-sidebar .close-btn {
+  transition: opacity 0.2s, background-color 0.2s;
+}
+.left-sidebar .close-btn:hover {
+  opacity: 1;
+  background-color: rgba(0, 0, 0, 0.06);
+}
+
+/* Desktop: hide sidebar when .sidebar-hidden */
+@media (min-width: 1200px) {
+  body #main-wrapper.sidebar-hidden .left-sidebar {
+    left: -270px !important;
+    right: auto !important;
+    width: 270px !important;
+    box-shadow: none;
+    pointer-events: none;
+  }
+  body #main-wrapper.sidebar-hidden .body-wrapper {
+    margin-left: 0 !important;
+  }
+  body #main-wrapper.sidebar-hidden .app-header {
+    width: 100% !important;
+  }
+}
+
+/* Sidebar overlay (mobile): click to close */
+.sidebar-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 98;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+@media (max-width: 1199px) {
+  .sidebar-overlay.active {
+    display: block;
+  }
+}
+@media (min-width: 1200px) {
+  .sidebar-overlay {
+    display: none !important;
+  }
+}
+
+/* Responsive: topstrip and layout */
+@media (max-width: 991px) {
+  .app-topstrip {
+    flex-wrap: wrap;
+    padding-top: 0.75rem !important;
+    padding-bottom: 0.75rem !important;
+  }
+  .app-topstrip h3 {
+    font-size: 0.95rem !important;
+  }
+}
+@media (max-width: 575px) {
+  .app-topstrip .d-flex.gap-5 {
+    gap: 0.5rem !important;
+  }
+  .app-topstrip img {
+    max-width: 90px;
+    height: auto;
+  }
+}
+
+/* Responsive: body content padding */
+@media (max-width: 1199px) {
+  .body-wrapper .container-fluid {
+    padding-top: 1.25rem !important;
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
+  }
+}
+@media (max-width: 767px) {
+  .body-wrapper .container-fluid {
+    padding-top: 1rem !important;
+    padding-left: 0.75rem !important;
+    padding-right: 0.75rem !important;
+  }
+}
+
+/* Navbar menu button always visible */
+.app-header .nav-link.sidebartoggler {
+  min-width: 2.5rem;
+  justify-content: center;
+}
+.app-header .nav-link.sidebartoggler:hover {
+  background-color: rgba(0, 0, 0, 0.06);
+  border-radius: 0.5rem;
+}
+
+/* ========== Cards ========== */
+.body-wrapper .card {
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: 0.75rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  transition: box-shadow 0.2s, transform 0.2s;
+}
+.body-wrapper .card:hover {
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+}
+.body-wrapper .card .card-body {
+  padding: 1.25rem 1.5rem;
+}
+
+/* Stat / KPI cards (icon + title + badge) */
+.body-wrapper .card .round-48,
+.body-wrapper .card .round-16 {
+  transition: transform 0.2s;
+}
+.body-wrapper .card:hover .round-48,
+.body-wrapper .card:hover .round-16 {
+  transform: scale(1.05);
+}
+.body-wrapper .card .badge.bg-secondary-subtle {
+  font-weight: 600;
+  padding: 0.35em 0.65em;
+  border-radius: 0.5rem;
+}
+
+/* ========== Buttons ========== */
+.btn {
+  border-radius: 0.5rem;
+  font-weight: 500;
+  transition: transform 0.12s, box-shadow 0.12s;
+}
+.btn:hover {
+  transform: translateY(-1px);
+}
+.btn:active {
+  transform: translateY(0);
+}
+.btn-primary {
+  box-shadow: 0 2px 8px rgba(30, 77, 183, 0.25);
+}
+.btn-primary:hover {
+  box-shadow: 0 4px 14px rgba(30, 77, 183, 0.35);
+}
+.btn-success:hover { box-shadow: 0 4px 14px rgba(57, 203, 127, 0.35); }
+.btn-info:hover    { box-shadow: 0 4px 14px rgba(11, 178, 251, 0.35); }
+.btn-warning:hover { box-shadow: 0 4px 14px rgba(253, 201, 15, 0.35); }
+.btn-danger:hover  { box-shadow: 0 4px 14px rgba(252, 75, 108, 0.35); }
+
+/* ========== Navbar / header ========== */
+.app-header .navbar {
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.06);
+}
+.app-header .dropdown-menu {
+  border-radius: 0.75rem;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.12);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  padding: 0.5rem;
+}
+.app-header .dropdown-item {
+  border-radius: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  transition: background-color 0.15s;
+}
+.app-header .dropdown-item:hover {
+  background-color: rgba(30, 77, 183, 0.08);
+}
+.app-header .navbar .rounded-circle {
+  border: 2px solid var(--bs-border-color);
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.app-header .navbar .rounded-circle:hover {
+  border-color: var(--bs-primary);
+  box-shadow: 0 0 0 3px rgba(30, 77, 183, 0.15);
+}
+
+/* ========== Tables ========== */
+.table {
+  border-radius: 0.75rem;
+  overflow: hidden;
+}
+.table thead th {
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  color: var(--bs-gray-700);
+  border-bottom-width: 2px;
+  padding: 0.85rem 1rem;
+}
+.table tbody td {
+  padding: 0.85rem 1rem;
+  vertical-align: middle;
+}
+.table-striped > tbody > tr:nth-of-type(odd) {
+  background-color: rgba(0, 0, 0, 0.02);
+}
+.table-hover > tbody > tr:hover {
+  background-color: rgba(30, 77, 183, 0.04);
+}
+
+/* DataTables overrides */
+.dataTables_wrapper .dataTables_length select,
+.dataTables_wrapper .dataTables_filter input {
+  border-radius: 0.5rem;
+  border: 1px solid var(--bs-border-color);
+  padding: 0.35rem 0.75rem;
+}
+.dataTables_wrapper .dataTables_paginate .paginate_button {
+  border-radius: 0.5rem !important;
+  margin: 0 2px;
+}
+.dataTables_wrapper .dataTables_paginate .paginate_button.current {
+  background: var(--bs-primary) !important;
+  border-color: var(--bs-primary) !important;
+  color: #fff !important;
+}
+
+/* ========== Form controls ========== */
+.form-control,
+.form-select {
+  border-radius: 0.5rem;
+  border: 1px solid var(--bs-border-color);
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.form-control:focus,
+.form-select:focus {
+  border-color: var(--bs-primary);
+  box-shadow: 0 0 0 3px rgba(30, 77, 183, 0.12);
+}
+.form-label {
+  font-weight: 500;
+  color: var(--bs-gray-800);
+}
+
+/* ========== Alerts ========== */
+.alert {
+  border: none;
+  border-radius: 0.75rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+.alert-danger {
+  background-color: #fef2f2;
+  color: #991b1b;
+}
+.alert-success {
+  background-color: #f0fdf4;
+  color: #166534;
+}
+.alert-warning {
+  background-color: #fffbeb;
+  color: #92400e;
+}
+.alert-info {
+  background-color: #eff6ff;
+  color: #1e40af;
+}
+
+/* ========== Badges ========== */
+.badge {
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+.badge.rounded-pill {
+  padding: 0.35em 0.75em;
+}
+
+/* ========== Body / content area ========== */
+.body-wrapper-inner {
+  background-color: #f8fafc;
+}
+.container-fluid {
+  padding-top: 1.5rem;
+  padding-bottom: 2rem;
+}
+
+/* ========== Page titles ========== */
+.body-wrapper h1,
+.body-wrapper h2,
+.body-wrapper h3,
+.body-wrapper h4,
+.body-wrapper h5 {
+  color: var(--bs-gray-800);
+  font-weight: 600;
+}
+
+/* ========== Subtle scrollbar ========== */
+.scroll-sidebar::-webkit-scrollbar {
+  width: 6px;
+}
+.scroll-sidebar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scroll-sidebar::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 3px;
+}
+.scroll-sidebar::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.25);
+}
+
+/* ========== Utilities ========== */
+.tracking-wide { letter-spacing: 0.05em; }
