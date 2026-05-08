@@ -60,11 +60,10 @@ Run it against `ptsifleet_db2`:
 mysql -u root ptsifleet_db2 < migrations/001_phase1_workflow_foundations.sql
 ```
 
-#### New tables (11)
+#### New tables (10)
 
 | Table                       | Purpose                                                              |
 | --------------------------- | -------------------------------------------------------------------- |
-| `genset`                    | Master record for gensets, backfilled from current `dispatch.d_genset` |
 | `gate_log`                  | Every entry/exit, with truck + trailer + genset verification        |
 | `gate_queue`                | Vehicles awaiting dispatcher approval                                |
 | `incident`                  | Delays, breakdowns, cargo issues, accidents — with re-assignment hook |
@@ -78,6 +77,10 @@ mysql -u root ptsifleet_db2 < migrations/001_phase1_workflow_foundations.sql
 
 #### Extended tables
 
+- `units` — `unit_type` (`truck` / `genset`). Trucks and gensets share
+  this table (e.g. `PM085` is a truck, `GS601` is a genset), distinguished
+  only by name prefix. The new column makes the distinction explicit; a
+  backfill `UPDATE` sets it from the existing `unit_name` prefix.
 - `booking` — `booking_type` (Import/Export/Local), `vessel_name`,
   `voyage_no`, `container_no_port`, `bill_of_lading`, `port_location`,
   `customs_cleared`, `customs_cleared_at`, `client_notified_at`.

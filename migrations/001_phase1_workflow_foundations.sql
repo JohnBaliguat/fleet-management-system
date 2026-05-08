@@ -8,7 +8,6 @@
 -- existing column or row. Existing flows keep working unchanged.
 --
 -- New entities:
---   genset                    — master record for gensets (currently a free-text column)
 --   gate_log                  — entry/exit log with QR + plate-match verification
 --   gate_queue                — vehicles waiting at gate awaiting dispatcher approval
 --   incident                  — delays, breakdowns, exceptions (links to dispatch/segment)
@@ -50,34 +49,26 @@ USE `ptsifleet_db2`;
 SET FOREIGN_KEY_CHECKS = 0;
 
 -- ---------------------------------------------------------------------
--- 1. genset master
+-- 1. units — distinguish trucks from gensets explicitly
+--
+-- Trucks (PM*, WV*, YG*, DT*, CT*) and gensets (GS*) both live in the
+-- `units` table, currently identified only by `unit_name` prefix. We
+-- add an explicit `unit_type` so reports/queries can filter cleanly
+-- without string-prefix matching, and backfill from the prefix.
 -- ---------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS `genset` (
-    `genset_id`        INT(11) NOT NULL AUTO_INCREMENT,
-    `genset_code`      VARCHAR(50)  NOT NULL,
-    `genset_serial`    VARCHAR(100) NOT NULL DEFAULT '',
-    `genset_brand`     VARCHAR(100) NOT NULL DEFAULT '',
-    `genset_model`     VARCHAR(100) NOT NULL DEFAULT '',
-    `genset_hours`     DECIMAL(10,2) NOT NULL DEFAULT 0.00,
-    `genset_status`    VARCHAR(50)  NOT NULL DEFAULT 'Good',
-    `genset_location`  VARCHAR(100) NOT NULL DEFAULT '',
-    `genset_remarks`   VARCHAR(255) NOT NULL DEFAULT '',
-    `created_at`       DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    `updated_at`       DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    PRIMARY KEY (`genset_id`),
-    UNIQUE KEY `uniq_genset_code` (`genset_code`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+ALTER TABLE `units`
+    ADD COLUMN IF NOT EXISTS `unit_type` VARCHAR(20) NOT NULL DEFAULT 'truck' AFTER `unit_name`,
+    ADD KEY IF NOT EXISTS `idx_units_type` (`unit_type`);
 
--- Backfill from distinct genset codes already in dispatch / units.
-INSERT IGNORE INTO `genset` (`genset_code`)
-SELECT DISTINCT TRIM(`d_genset`)
-FROM `dispatch`
-WHERE TRIM(`d_genset`) <> '' AND TRIM(`d_genset`) <> '-';
+UPDATE `units`
+SET `unit_type` = 'genset'
+WHERE UPPER(LEFT(TRIM(`unit_name`), 2)) = 'GS'
+  AND `unit_type` <> 'genset';
 
-INSERT IGNORE INTO `genset` (`genset_code`)
-SELECT DISTINCT TRIM(`unit_assignGenset`)
-FROM `units`
-WHERE TRIM(`unit_assignGenset`) <> '' AND TRIM(`unit_assignGenset`) <> '-';
+UPDATE `units`
+SET `unit_type` = 'truck'
+WHERE UPPER(LEFT(TRIM(`unit_name`), 2)) <> 'GS'
+  AND `unit_type` <> 'truck';
 
 -- ---------------------------------------------------------------------
 -- 2. booking — Import / Export / Local + port fields
