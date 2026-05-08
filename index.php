@@ -80,6 +80,13 @@ $routes = [
     'dispatch-segment' => 'dispatcher/segment.php',
     'dispatch-bookingSegments' => 'dispatcher/booking-segments.php',
     'dispatch-profile' => 'dispatcher/profile.php',
+    // Gate-Guard routes
+    'gate-dashboard' => 'gate/dashboard.php',
+    'gate-checkin'   => 'gate/checkin.php',
+    'gate-incident'  => 'gate/incident.php',
+    'gate-profile'   => 'gate/profile.php',
+    'gate-logout'    => 'logout.php',
+    'gate-login'     => 'login.php',
     // Driver routes
     'driver-dashboard' => 'driver/dashboard.php',
     'driver-profile' => 'driver/profile.php',

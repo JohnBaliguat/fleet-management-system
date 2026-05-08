@@ -217,15 +217,103 @@ foul-trip a segment that was only created moments ago.
   follow-up once the workflow-stage flow stabilises.
 - **Segment-level billing rollup** — Phase 6.
 
-## Phase 3 — Gate Guard module *(planned)*
+## Phase 3 — Gate Guard module *(in progress)*
 
-New top-level folder `gate/`:
-- `dashboard.php` — entry/exit log + queue
-- `checkin.php` — QR scan + plate match against active dispatch
-- `incident.php` — flag unauthorised/damaged
-- New routes in [index.php](index.php): `gate-*`
-- Reuses existing [admin/gate.php](admin/gate.php) UI for the
-  dispatcher-side queue view.
+New top-level folder [gate/](gate/) and a `Gate-Guard` user role.
+Existing flows are untouched — this is a brand-new role that lives
+alongside Admin / Dispatcher / Driver / etc.
+
+### Pages
+
+| File                                          | Purpose                                               |
+| --------------------------------------------- | ----------------------------------------------------- |
+| [gate/dashboard.php](gate/dashboard.php)      | Today IN/OUT counters, recent movements, pending queue, open-incident count |
+| [gate/checkin.php](gate/checkin.php)          | QR scanner (html5-qrcode) **or** manual plate entry → looks up active dispatch → guard logs IN/OUT |
+| [gate/incident.php](gate/incident.php)        | Flag unauthorised vehicles, damaged goods, access violations (with optional photo) |
+| [gate/profile.php](gate/profile.php)          | Minimal profile page                                  |
+| [gate/sidebar.php](gate/sidebar.php) + [gate/navbar.php](gate/navbar.php) | Role-specific chrome      |
+| [gate/_layout_top.php](gate/_layout_top.php) + [gate/_layout_bottom.php](gate/_layout_bottom.php) | Shared layout shells so the role pages stay short |
+| [gate/404.php](gate/404.php)                  | Branded 404                                           |
+
+Routes added to [index.php](index.php): `gate-dashboard`, `gate-checkin`,
+`gate-incident`, `gate-profile`, `gate-logout`, `gate-login`. A separate
+[gate-index.php](gate-index.php) entry point is also provided for parity
+with `dispatcher-index.php` / `driver-index.php`, but the main flow goes
+through the central `index.php` route table.
+
+### Backend endpoints
+
+| Endpoint                                                                 | Purpose                                                                                |
+| ------------------------------------------------------------------------ | -------------------------------------------------------------------------------------- |
+| [php/fetch/active_dispatch_by_truck.php](php/fetch/active_dispatch_by_truck.php) | Resolve QR payload → dispatch (tries `d_id`, then `booking_no`, then plate). Joins `booking.booking_type`/`customs_cleared` and computes an `authorised` flag from `workflow_stage` + `gate_queue` |
+| [php/operations/gate_checkin.php](php/operations/gate_checkin.php)              | Verify truck + trailer + genset against the dispatch row, write a `gate_log` row, advance workflow (`dispatcher_assigned` → `gate_cleared` on first verified IN; `gate_cleared` → `en_route` on OUT), block Export OUT when `customs_cleared = 0`, consume any matching `gate_queue` entry |
+| [php/operations/gate_queue_add.php](php/operations/gate_queue_add.php)          | Guard adds a vehicle to the dispatcher queue when no auth exists yet                   |
+| [php/operations/gate_queue_decide.php](php/operations/gate_queue_decide.php)    | Dispatcher / Admin approves or denies a queue entry                                    |
+| [php/operations/report_incident.php](php/operations/report_incident.php)        | File a gate incident (with optional photo upload) and emit a `workflow_event(stage='incident_flagged')` |
+| [php/fetch/gate_log_recent.php](php/fetch/gate_log_recent.php)                  | Recent movements + today's IN/OUT counters for the dashboard                           |
+| [php/fetch/gate_queue.php](php/fetch/gate_queue.php)                            | List queue rows by status (`pending` by default)                                       |
+| [php/fetch/incident_list.php](php/fetch/incident_list.php)                      | List incidents (filterable by source: `gate` / `all`)                                  |
+| [php/fetch/incident_open.php](php/fetch/incident_open.php)                      | Count of open incidents for the dashboard tile                                         |
+
+### Verification rule
+
+`gate_checkin.php` matches the scanned/typed assignment against the
+canonical `dispatch` row. Truck plate, trailer code, and genset code
+must all match (empty fields on the dispatch side don't fail the
+match — e.g. genset is sometimes optional). Mismatches are logged
+**verbatim** in `gate_log.mismatch_reason`, the row is written with
+`verified = 0`, and the guard's UI shows the mismatch — the spec calls
+for an audit trail rather than silently refusing.
+
+### Customs gate (Phase 2 hook)
+
+When a guard tries to log **OUT** a dispatch whose booking is `Export`
+with `customs_cleared = 0`, the endpoint:
+
+1. Writes a `gate_log` row with `verified = 0` and
+   `mismatch_reason = "CUSTOMS NOT CLEARED — exit blocked"` (auditable).
+2. Returns `status = "error"` so the front-end refuses the action.
+
+### Workflow advances
+
+Verified, authorised gate movements progress the dispatch's
+`workflow_stage`:
+- IN at `dispatcher_assigned` or `driver_accepted` → `gate_cleared`,
+  also stamps `dispatch.gate_cleared_at`.
+- OUT at `gate_cleared` → `en_route`.
+
+Each advance writes a `workflow_event` with `actor_role = 'gate_guard'`
+so the timeline shows who moved it.
+
+### Dispatcher-side: gate queue panel
+
+[dispatcher/gate.php](dispatcher/gate.php) gained a new bottom panel
+that polls `php/fetch/gate_queue.php?status=pending` every 10 s and
+exposes Approve / Deny buttons that POST to `gate_queue_decide.php`.
+Once approved, the next time the guard scans that truck the
+`active_dispatch_by_truck` endpoint reports `authorised = 1`.
+
+### User-management hook
+
+[admin/user.php](admin/user.php) Add and Edit modals gained a
+**Gate Guard** option in the role dropdown, so admins can mint guard
+accounts without DDL. Login routing in [login-php.php](login-php.php)
+now sends `user_type = 'Gate-Guard'` to `gate-dashboard`.
+
+### Things deferred
+
+- **Photo capture from camera in the Incident page** — currently the
+  upload uses the standard `<input type="file" capture="environment">`,
+  which delegates to the device camera on mobile. A richer in-page
+  capture (live preview, multi-shot) belongs in the Phase 5 driver
+  PWA where camera-tooling investment is already required.
+- **Reassignment from incident** — `incident.reassigned_d_id` is in
+  the schema but the dispatcher's reassign-on-incident UI lands in
+  Phase 4, where the dispatcher's incident workflow is built out.
+- **QR generation for dispatches** — the scanner can already read any
+  QR that encodes the `d_id`, `booking_no`, or plate; the dispatcher
+  print/dispatch templates will get a QR in a follow-up so guards can
+  scan a printed slip instead of asking the driver.
 
 ## Phase 4 — Dispatcher additions *(planned)*
 
