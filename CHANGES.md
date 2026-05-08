@@ -315,14 +315,99 @@ now sends `user_type = 'Gate-Guard'` to `gate-dashboard`.
   print/dispatch templates will get a QR in a follow-up so guards can
   scan a printed slip instead of asking the driver.
 
-## Phase 4 — Dispatcher additions *(planned)*
+## Phase 4 — Dispatcher additions *(in progress)*
 
-- Gate-queue panel inside the dispatch dashboard
-- Incident flagging with one-click re-assignment to next available
-  driver, writing a new `dispatch` row and an `incident.reassigned_d_id`
-  pointer.
-- Trailer & genset assignment becomes part of the dispatch action;
-  gate-guard verifies on exit using `gate_log.verified`.
+### Gate Queue + Open Incidents tiles on the dispatch dashboard
+
+[dispatcher/dashboard.php](dispatcher/dashboard.php) gained a new row
+under the existing Today / Avg / Total cards: two clickable tiles
+that auto-refresh every 15 s.
+
+- **Gate Queue (pending)** — count + most recent waiting truck.
+  Clicking jumps to the existing gate page where the dispatcher can
+  approve/deny.
+- **Open Incidents** — open count + the latest incident summary.
+  Clicking jumps to the new `dispatch-incidents` page below.
+
+Both tiles use the existing endpoints `gate_queue.php` and
+`incident_open.php` / `incident_list.php` from earlier phases — no
+new server work needed for the dashboard summary.
+
+### Incidents management page
+
+New shared body [php/assets/incidents_body.php](php/assets/incidents_body.php)
+rendered by both:
+
+- [dispatcher/incidents.php](dispatcher/incidents.php) → route `dispatch-incidents`
+- [admin/incidents.php](admin/incidents.php) → route `incidents`
+
+Sidebars updated in both roles. The page lists incidents with filter
+controls (status: open / acknowledged / resolved / all; severity
+filter; refresh button). Each row shows reported time, type +
+optional photo link, severity badge, truck/booking, driver,
+description, status, and actions:
+
+- **Acknowledge** — flips `incident.status` from `open` to
+  `acknowledged` (open-only).
+- **Re-assign** — opens the reassign modal (described below).
+- **Resolve** — prompts for an optional resolution note, stamps
+  `resolved_at = NOW()`.
+
+[js/incidents.js](js/incidents.js) is the page controller. Backend
+support uses the upgraded
+[php/fetch/incident_list.php](php/fetch/incident_list.php) which now
+accepts `status` and `severity` filters as well as `source`.
+
+### One-click re-assignment (the killer Phase 4 feature)
+
+[php/operations/incident_reassign.php](php/operations/incident_reassign.php)
+implements the spec rule: "Trigger re-assignment instantly". The
+dispatcher picks a new driver (from the Good-status dropdown), a new
+truck (datalist of `units` filtered to `unit_type='truck'` and
+`unit_status='Good'`), and optionally overrides the trailer/genset.
+On submit the endpoint runs a single transaction:
+
+1. Insert a new `dispatch` row mirroring booking metadata
+   (`booking_no`, `booking_sn`, `cth_*`, customer, hub) but with the
+   new driver/truck and a `workflow_stage = 'dispatcher_assigned'`.
+2. Update the original `incident` to point at the new dispatch via
+   `reassigned_d_id` and bump it to `acknowledged`.
+3. Mark the original dispatch as `workflow_stage = 'reassigned'` so
+   it's auditable but visibly superseded.
+4. Append two `workflow_event` rows — one `reassigned_from` on the
+   original, one `dispatcher_assigned` on the new one — both linking
+   back to the incident in the notes.
+
+If the transaction fails at any step it's fully rolled back. The
+incidents page then refreshes and the row shows
+`Re-assigned → dispatch #N`.
+
+### New endpoints
+
+| Endpoint                                                                       | Purpose                                                   |
+| ------------------------------------------------------------------------------ | --------------------------------------------------------- |
+| [php/operations/incident_acknowledge.php](php/operations/incident_acknowledge.php) | Open → acknowledged + workflow_event audit                |
+| [php/operations/incident_resolve.php](php/operations/incident_resolve.php)     | Mark resolved with optional note                          |
+| [php/operations/incident_reassign.php](php/operations/incident_reassign.php)   | Atomic re-assignment described above                      |
+
+### Trailer & genset assignment
+
+The spec has this as Phase 4. The verification is **already enforced
+in Phase 3** — [php/operations/gate_checkin.php](php/operations/gate_checkin.php)
+fails verification when the truck/trailer/genset on a gate scan
+don't match the canonical `dispatch` row. `gate_log.verified = 0`
+and `mismatch_reason` carry the audit. No further work needed in
+this phase.
+
+### Things deferred
+
+- **Reassign across booking_segments** — currently the new dispatch
+  inherits the original booking but the existing `trips` rows still
+  point at the original `d_id`. A follow-up could optionally
+  duplicate the open trip onto the new dispatch.
+- **Severity-based auto-routing** — high-severity incidents could
+  trigger a default driver suggestion. Out of scope for the first
+  cut; the modal already filters to Good-status drivers.
 
 ## Phase 5 — Driver PWA *(planned)*
 

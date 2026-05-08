@@ -179,6 +179,82 @@ if (isset($_SESSION['user_type']) && $_SESSION['user_type'] === "Dispatcher") {
                 </div>
               </div>
             </div>
+
+            <!-- Phase 4: Gate-queue + Incidents at-a-glance -->
+            <div class="row mt-2">
+              <div class="col-md-6">
+                <a href="dispatch-gate" class="text-decoration-none">
+                  <div class="card overflow-hidden border-warning">
+                    <div class="card-body pb-3">
+                      <div class="d-flex align-items-center">
+                        <span class="btn btn-warning rounded-circle round-48 hstack justify-content-center text-dark">
+                          <i class="ti ti-door fs-6"></i>
+                        </span>
+                        <div class="ms-3">
+                          <h5 class="mb-0 fw-bolder fs-4 text-dark">Gate Queue (pending)</h5>
+                          <p class="mb-0 text-muted" id="gateQueueLatest">&mdash;</p>
+                        </div>
+                        <div class="ms-auto">
+                          <span id="gateQueueCount" class="badge bg-warning text-dark" style="font-size: 24px; font-weight: 700;">0</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </a>
+              </div>
+              <div class="col-md-6">
+                <a href="dispatch-incidents" class="text-decoration-none">
+                  <div class="card overflow-hidden border-danger">
+                    <div class="card-body pb-3">
+                      <div class="d-flex align-items-center">
+                        <span class="btn btn-danger rounded-circle round-48 hstack justify-content-center">
+                          <i class="ti ti-alert-triangle fs-6"></i>
+                        </span>
+                        <div class="ms-3">
+                          <h5 class="mb-0 fw-bolder fs-4 text-dark">Open Incidents</h5>
+                          <p class="mb-0 text-muted" id="incidentLatest">&mdash;</p>
+                        </div>
+                        <div class="ms-auto">
+                          <span id="openIncidentCount" class="badge bg-danger" style="font-size: 24px; font-weight: 700;">0</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </a>
+              </div>
+            </div>
+            <script>
+            (function(){
+              function pollPhase4(){
+                $.getJSON('php/fetch/gate_queue.php', { status: 'pending' }, function(res){
+                  if (res.status !== 'success') return;
+                  $('#gateQueueCount').text(res.rows.length);
+                  if (res.rows.length) {
+                    var latest = res.rows[0];
+                    $('#gateQueueLatest').text((latest.truck_plate || '-') + ' — ' + (latest.d_driverName || latest.booking_no || ''));
+                  } else {
+                    $('#gateQueueLatest').text('No vehicles waiting.');
+                  }
+                });
+                $.getJSON('php/fetch/incident_list.php', { source: 'all', limit: 1 }, function(res){
+                  if (res.status !== 'success') return;
+                  // Use the open count endpoint for accuracy.
+                  $.getJSON('php/fetch/incident_open.php', function(c){
+                    if (c.status === 'success') $('#openIncidentCount').text(c.count);
+                  });
+                  if (res.rows.length) {
+                    var i = res.rows[0];
+                    $('#incidentLatest').text(i.incident_type + ' — ' + (i.truck_plate || '-') + ' (' + i.severity + ')');
+                  } else {
+                    $('#incidentLatest').text('No incidents.');
+                  }
+                });
+              }
+              $(pollPhase4);
+              setInterval(pollPhase4, 15000);
+            })();
+            </script>
+
             <!--  -->
             <div class="row">
               <div class="col-md-2">

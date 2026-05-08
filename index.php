@@ -37,6 +37,7 @@ $routes = [
     'user' => 'admin/user.php',
     'segment' => 'admin/segment.php',
     'bookingSegments' => 'admin/booking-segments.php',
+    'incidents' => 'admin/incidents.php',
     'profile' => 'admin/profile.php',
     'logout' => 'logout.php',
     'login' => 'login.php',
@@ -79,6 +80,7 @@ $routes = [
     'dispatch-user' => 'dispatcher/user.php',
     'dispatch-segment' => 'dispatcher/segment.php',
     'dispatch-bookingSegments' => 'dispatcher/booking-segments.php',
+    'dispatch-incidents' => 'dispatcher/incidents.php',
     'dispatch-profile' => 'dispatcher/profile.php',
     // Gate-Guard routes
     'gate-dashboard' => 'gate/dashboard.php',

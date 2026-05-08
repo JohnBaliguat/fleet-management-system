@@ -402,6 +402,12 @@
               </a>
             </li>
             <li class="sidebar-item">
+              <a class="sidebar-link" href="dispatch-incidents" aria-expanded="false">
+                <i class="ti ti-alert-triangle"></i>
+                <span class="hide-menu">Incidents</span>
+              </a>
+            </li>
+            <li class="sidebar-item">
               <a class="sidebar-link" href="dispatch-segment" aria-expanded="false">
                 <i class="ti ti-list-details"></i>
                 <span class="hide-menu">Segment/location</span>

@@ -436,6 +436,12 @@
               </a>
             </li>
             <li class="sidebar-item">
+              <a class="sidebar-link" href="incidents" aria-expanded="false">
+                <i class="ti ti-alert-triangle"></i>
+                <span class="hide-menu">Incidents</span>
+              </a>
+            </li>
+            <li class="sidebar-item">
               <a class="sidebar-link" href="segment" aria-expanded="false">
                 <i class="ti ti-list-details"></i>
                 <span class="hide-menu">Segment/location</span>
