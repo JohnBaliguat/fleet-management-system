@@ -430,6 +430,12 @@
             </li>
 
             <li class="sidebar-item">
+              <a class="sidebar-link" href="bookingSegments" aria-expanded="false">
+                <i class="ti ti-route"></i>
+                <span class="hide-menu">Booking Segments</span>
+              </a>
+            </li>
+            <li class="sidebar-item">
               <a class="sidebar-link" href="segment" aria-expanded="false">
                 <i class="ti ti-list-details"></i>
                 <span class="hide-menu">Segment/location</span>

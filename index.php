@@ -36,6 +36,7 @@ $routes = [
     'genset' => 'admin/genset.php',
     'user' => 'admin/user.php',
     'segment' => 'admin/segment.php',
+    'bookingSegments' => 'admin/booking-segments.php',
     'profile' => 'admin/profile.php',
     'logout' => 'logout.php',
     'login' => 'login.php',
@@ -77,6 +78,7 @@ $routes = [
     'dispatch-genset' => 'dispatcher/genset.php',
     'dispatch-user' => 'dispatcher/user.php',
     'dispatch-segment' => 'dispatcher/segment.php',
+    'dispatch-bookingSegments' => 'dispatcher/booking-segments.php',
     'dispatch-profile' => 'dispatcher/profile.php',
     // Driver routes
     'driver-dashboard' => 'driver/dashboard.php',
