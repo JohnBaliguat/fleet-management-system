@@ -269,7 +269,7 @@ if (isset($_SESSION['user_type']) && $_SESSION['user_type'] === "Driver") {
   <script src="assets/libs/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
   <script src="alert/node_modules/sweetalert2/dist/sweetalert2.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/iconify-icon@1.0.8/dist/iconify-icon.min.js"></script>
-  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyD4FCZJxNlXSlbV4pX18229Vh8UofzpAEk&libraries=places"></script>
+  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDi9dpeJZM1GkdSfovy2ufBWQZFabMrSRA&libraries=places"></script>
 
   <script>
     // Filter functionality

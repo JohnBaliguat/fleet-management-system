@@ -417,7 +417,7 @@ if (isset($_SESSION['user_type']) && $_SESSION['user_type'] === "Dispatcher") {
       <script src="datatable/datatables.min.js"></script>
       <!-- solar icons -->
       <script src="https://cdn.jsdelivr.net/npm/iconify-icon@1.0.8/dist/iconify-icon.min.js"></script>
-      <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyD4FCZJxNlXSlbV4pX18229Vh8UofzpAEk&libraries=places"></script>
+      <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDi9dpeJZM1GkdSfovy2ufBWQZFabMrSRA&libraries=places"></script>
       <script>
         // ✅ Filter Function
         document.getElementById("containerFilter").addEventListener("keyup", function() {
