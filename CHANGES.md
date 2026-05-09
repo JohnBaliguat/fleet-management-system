@@ -409,21 +409,105 @@ this phase.
   trigger a default driver suggestion. Out of scope for the first
   cut; the modal already filters to Good-status drivers.
 
-## Phase 5 — Driver PWA *(planned)*
+## Phase 5 — Driver PWA *(in progress)*
 
-Layered on top of the existing mobile-friendly driver pages:
-- `manifest.webmanifest` + service worker (`/driver/sw.js`) with
-  IndexedDB-backed offline queue
-- VAPID server keys + `php/crud/add/save_push_subscription.php`
-- Camera capture + signature pad on POD page
-- One-tap accept / decline (writes `dispatch.driver_accepted_at`)
-- Pre-departure checklist gate before driver flips to *Available*
-- Status update tap-actions (Picked up / On the way / Arrived /
-  Delivered / Issue)
-- Gateless-completion page (GPS-required photos)
-- Jack-up trailer flow
-- Breakdown / cancel with assistance request
-- In-app chat against `message`
+The driver experience becomes a Progressive Web App: installable on
+home screen, works offline, and surfaces every spec'd action as a
+one-tap mobile-first flow.
+
+### PWA shell
+
+| File                               | Purpose                                                                  |
+| ---------------------------------- | ------------------------------------------------------------------------ |
+| [manifest.webmanifest](manifest.webmanifest) | Install metadata; `start_url=driver-dashboard`, theme-colour, icons |
+| [sw-driver.js](sw-driver.js)       | Service worker — at site root so scope covers both driver/* and index.php |
+| [driver/pwa-register.js](driver/pwa-register.js) | Registers the SW, surfaces an Online/Offline pill, and (when VAPID configured) subscribes to push |
+| [driver/_layout_top.php](driver/_layout_top.php) + [_layout_bottom.php](driver/_layout_bottom.php) | Shared shells for the new mobile pages |
+
+The service worker:
+- Caches the app shell (driver dashboard + Bootstrap/jQuery/Sweet-Alert
+  CSS+JS) on install so the home screen loads while offline.
+- Intercepts POSTs to a curated allowlist of mutation endpoints
+  (driver_*, save_pod, save_gateless, save_trailer_jackup,
+  save_breakdown, save_pre_departure, send_message). On network
+  failure the request is stashed in IndexedDB (full body — including
+  multipart files via a JSON-marshalled fallback) and the page gets
+  back a synthetic `202 queued` response. When the browser fires
+  `sync` (or the page posts a `pt-replay` message after coming back
+  online) the queue replays in order.
+- Handles `push` events with a clickable notification.
+
+### Driver dashboard wired up
+
+[driver/dashboard.php](driver/dashboard.php) gained:
+- `<link rel="manifest">` + Apple/mobile-web-app meta tags
+- Per-card workflow badge, plus a stage-aware action row:
+  - **Pending** (`dispatcher_assigned` / `reassigned`):
+    Accept / Decline buttons.
+  - **Accepted** (`driver_accepted` / `gate_cleared` / `en_route`):
+    Status pills (Picked up / On the way / Arrived / Delivered) and
+    quick-links to POD / Gateless / Jack-up.
+- Status taps capture GPS via `navigator.geolocation` (best-effort)
+  and POST to the new endpoints; "Delivered" auto-routes to the POD
+  page.
+
+### Driver mobile pages
+
+| File                                 | What it does                                                          |
+| ------------------------------------ | --------------------------------------------------------------------- |
+| [driver/checklist.php](driver/checklist.php) | Truck picker + tap-to-confirm fuel/tyres/lights/cargo/genset, signs the driver as Available |
+| [driver/pod.php](driver/pod.php)             | Camera ×3 + a touch-friendly signature pad on `<canvas>`; recipient name; auto GPS |
+| [driver/gateless.php](driver/gateless.php)   | GPS lock + 2 mandatory photos; offline-safe via SW queue              |
+| [driver/jackup.php](driver/jackup.php)       | GPS + photo for trailer detached at site; opens a `trailer_jackup` row with `billing_active = 1` |
+| [driver/breakdown.php](driver/breakdown.php) | Type + severity + assistance request (tow/mechanic/cargo/emergency) + GPS + photo |
+| [driver/messages.php](driver/messages.php)   | Polling chat with dispatcher, 5s interval, monotonic `since=msg_id` cursor |
+
+### Backend endpoints
+
+| File                                                                 | Purpose                                                                                          |
+| -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| [php/operations/_driver_auth.php](php/operations/_driver_auth.php)   | Tiny helper: `require_driver_session()`, `require_post()`, `json_out()` — used by every driver endpoint |
+| [driver_accept_job.php](php/operations/driver_accept_job.php)        | Stamps `driver_accepted_at`, advances workflow to `driver_accepted`, audit event                 |
+| [driver_decline_job.php](php/operations/driver_decline_job.php)      | Stamps `driver_declined_at`, stores `decline_reason`, audit event                                |
+| [driver_update_status.php](php/operations/driver_update_status.php)  | Picked up / On the way / Arrived → keeps `en_route`; Delivered → `delivered`; Issue → no stage change. Updates `drivers.last_lat/lng/last_seen_at` |
+| [save_pre_departure.php](php/operations/save_pre_departure.php)      | Inserts a `pre_departure_checklist` row; refuses if any item is unchecked; sets `drivers.shift_truck` and `shift_started_at` |
+| [save_pod.php](php/operations/save_pod.php)                          | Photos + signature dataURL → `pod_capture`; advances to `pod_captured`                          |
+| [save_gateless.php](php/operations/save_gateless.php)                | GPS + 2 photos → `gateless_completion`; advances to `delivered`                                  |
+| [save_trailer_jackup.php](php/operations/save_trailer_jackup.php)    | GPS + photo → `trailer_jackup` (`billing_active = 1`)                                            |
+| [save_breakdown.php](php/operations/save_breakdown.php)              | Files an `incident` with `assistance` populated; emits `incident_flagged` audit                  |
+| [send_message.php](php/operations/send_message.php)                  | Insert into `message` table; defaults driver→dispatcher, dispatcher→driver                       |
+| [php/fetch/messages.php](php/fetch/messages.php)                     | Polling endpoint with `since=msg_id` cursor; auto marks read for the viewer                      |
+| [php/crud/add/save_push_subscription.php](php/crud/add/save_push_subscription.php) | Upsert into `push_subscription` keyed by endpoint                                |
+
+### Push notifications — partial
+
+The schema, the SW handler, the subscription save endpoint, and the
+client-side subscribe flow are all in place. To turn it on you only
+need to:
+
+1. `cp php/config/vapid.example.php php/config/vapid.php`
+2. Generate keys (`npx web-push generate-vapid-keys`) and paste them
+   into `vapid.php`.
+3. Use a server-side push library (e.g. `minishlink/web-push`) to
+   actually dispatch notifications from `incident_reassign.php`,
+   `gate_queue_decide.php`, and the booking-creation flow. That
+   dispatch loop is the one piece I deferred to keep this phase
+   scoped — Phase 6 will tie it in alongside billing close + client
+   notification.
+
+### Things deferred (intentionally)
+
+- **Server push dispatcher** — see above.
+- **Trip Receipts viewer** — the schema currently stores receipt
+  references as the free-text `dispatch.d_tripReceipt`. A
+  receipts-attached-to-dispatch table belongs in Phase 6.
+- **Multi-leg POD** — POD is captured against a `dispatch`. When a
+  dispatch has multiple `trips` rows the POD is logically the last
+  leg; per-leg POD is straightforward (`save_pod.php` already accepts
+  `trip_id`) but the UI to pick a specific leg can wait.
+- **Group alerts from operations** — `message.to_role = 'group'`
+  works on the schema; broadcasting from the dispatcher side is a
+  small follow-up UI.
 
 ## Phase 6 — Billing close + client notify *(planned)*
 

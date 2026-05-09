@@ -96,6 +96,13 @@ $routes = [
     'driver-unit' => 'driver/unit.php',
     'driver-tripReport' => 'driver/trip-report.php',
     'driver-driversReport' => 'driver/drivers-report.php',
+    // Phase 5 — Driver PWA
+    'driver-checklist' => 'driver/checklist.php',
+    'driver-pod' => 'driver/pod.php',
+    'driver-gateless' => 'driver/gateless.php',
+    'driver-jackup' => 'driver/jackup.php',
+    'driver-breakdown' => 'driver/breakdown.php',
+    'driver-messages' => 'driver/messages.php',
     // Shop routes
     'shop-dashboard' => 'shop/dashboard.php',
     'shop-rescue' => 'shop/rescue.php',
