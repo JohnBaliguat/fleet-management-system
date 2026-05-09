@@ -56,6 +56,10 @@ $stmt->close();
 // Mark unread messages as read for the current viewer (best-effort).
 if ($role === 'Driver') {
     $conn->query("UPDATE message SET read_at = NOW() WHERE read_at IS NULL AND to_role = 'driver' AND (to_id = $id OR to_id IS NULL)");
+} elseif (isset($driverIdFilter) && $driverIdFilter > 0) {
+    // Dispatcher / Admin viewing a specific driver's thread —
+    // mark that driver's incoming messages as read.
+    $conn->query("UPDATE message SET read_at = NOW() WHERE read_at IS NULL AND from_role = 'driver' AND from_id = $driverIdFilter");
 }
 
 echo json_encode(['status' => 'success', 'rows' => $rows]);

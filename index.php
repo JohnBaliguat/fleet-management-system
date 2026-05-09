@@ -43,6 +43,7 @@ $routes = [
     'dispatchReceipts' => 'admin/dispatch-receipts.php',
     'verifications' => 'admin/verifications.php',
     'equipment' => 'admin/equipment.php',
+    'chat' => 'admin/chat.php',
     'profile' => 'admin/profile.php',
     'logout' => 'logout.php',
     'login' => 'login.php',
@@ -91,6 +92,7 @@ $routes = [
     'dispatch-receipts' => 'dispatcher/dispatch-receipts.php',
     'dispatch-verifications' => 'dispatcher/verifications.php',
     'dispatch-equipment' => 'dispatcher/equipment.php',
+    'dispatch-chat' => 'dispatcher/chat.php',
     'dispatch-profile' => 'dispatcher/profile.php',
     // Gate-Guard routes
     'gate-dashboard' => 'gate/dashboard.php',

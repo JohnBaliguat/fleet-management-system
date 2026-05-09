@@ -314,6 +314,11 @@ if (isset($_SESSION['user_type']) && $_SESSION['user_type'] === "Driver") {
         <i class="ti ti-truck"></i>
         <span>Unit</span>
       </a>
+      <a href="driver-messages" class="nav-item" id="navChat">
+        <i class="ti ti-message-circle"></i>
+        <span>Chat</span>
+        <span id="unreadDot" class="badge bg-danger" style="position:absolute;top:6px;right:18px;display:none;border-radius:50%;width:8px;height:8px;padding:0;"></span>
+      </a>
       <a href="driver-tripReport" class="nav-item">
         <i class="ti ti-clipboard-list"></i>
         <span>Reports</span>
@@ -514,6 +519,19 @@ if (isset($_SESSION['user_type']) && $_SESSION['user_type'] === "Driver") {
     
     fetchDriverBookings();
     setInterval(fetchDriverBookings, 5000);
+
+    // Phase 5 — Chat unread dot on the bottom-nav Chat icon.
+    function pollChatUnread() {
+      $.getJSON('php/fetch/messages_unread.php', function (res) {
+        if (res.status === 'success' && parseInt(res.count, 10) > 0) {
+          $('#unreadDot').show();
+        } else {
+          $('#unreadDot').hide();
+        }
+      });
+    }
+    pollChatUnread();
+    setInterval(pollChatUnread, 10000);
 
     // SOS Function
     function sosAlert() {
