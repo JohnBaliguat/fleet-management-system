@@ -199,19 +199,67 @@ if (isset($_SESSION['user_type']) && $_SESSION['user_type'] === "Driver") {
                         <button class="btn-modern btn-outline-modern flex-fill phase5-decline" data-id="<?= $d_id ?>"><i class="ti ti-x"></i> Decline</button>
                       </div>
                     <?php elseif ($isAccepted): ?>
-                      <div class="phase5-status-row d-flex flex-wrap gap-1 mb-2">
-                        <button class="btn-modern btn-outline-modern phase5-status" data-id="<?= $d_id ?>" data-st="picked_up"  style="flex:1;min-width:42%;font-size:12px;padding:6px;">Picked up</button>
-                        <button class="btn-modern btn-outline-modern phase5-status" data-id="<?= $d_id ?>" data-st="on_the_way" style="flex:1;min-width:42%;font-size:12px;padding:6px;">On the way</button>
-                        <button class="btn-modern btn-outline-modern phase5-status" data-id="<?= $d_id ?>" data-st="arrived"    style="flex:1;min-width:42%;font-size:12px;padding:6px;">Arrived</button>
-                        <button class="btn-modern btn-success-modern phase5-status" data-id="<?= $d_id ?>" data-st="delivered"  style="flex:1;min-width:42%;font-size:12px;padding:6px;">Delivered</button>
+                      <?php
+                        // Determine the highest-progressed driver tap for this dispatch.
+                        // Drives the visual hierarchy: completed steps green-disabled, next
+                        // step primary blue, future steps faded outline.
+                        $statusOrder  = ['picked_up', 'on_the_way', 'arrived', 'delivered'];
+                        $statusLabels = ['picked_up' => 'Picked up', 'on_the_way' => 'On the way', 'arrived' => 'Arrived at destination', 'delivered' => 'Mark Delivered'];
+                        $statusIcons  = ['picked_up' => 'ti-package', 'on_the_way' => 'ti-arrow-right', 'arrived' => 'ti-map-pin', 'delivered' => 'ti-check'];
+                        $stmtX = $conn->prepare(
+                            "SELECT stage FROM workflow_event
+                             WHERE d_id = ? AND actor_role = 'driver'
+                               AND stage IN ('picked_up','on_the_way','arrived','delivered')
+                             ORDER BY we_id DESC LIMIT 1"
+                        );
+                        $stmtX->bind_param("i", $d_id);
+                        $stmtX->execute();
+                        $latestRow   = $stmtX->get_result()->fetch_assoc();
+                        $stmtX->close();
+                        $latestStage = $latestRow['stage'] ?? '';
+                        $latestIdx   = $latestStage !== '' ? array_search($latestStage, $statusOrder, true) : -1;
+                      ?>
+                      <small class="text-muted d-block mb-1"><i class="ti ti-route"></i> Trip status — tap each as it happens</small>
+                      <div class="d-flex flex-column gap-1 mb-3 phase5-status-list">
+                        <?php foreach ($statusOrder as $i => $st):
+                          $done   = $i <= $latestIdx;
+                          $isNext = $i === $latestIdx + 1;
+                          $cls = $done ? 'btn-success-modern' : ($isNext ? 'btn-primary-modern' : 'btn-outline-modern');
+                          $opacity = $done ? '0.7' : ($isNext ? '1' : '0.55');
+                        ?>
+                          <button class="btn-modern <?= $cls ?> phase5-status text-start"
+                                  data-id="<?= $d_id ?>"
+                                  data-st="<?= $st ?>"
+                                  <?= $done ? 'disabled' : '' ?>
+                                  style="display:flex;align-items:center;gap:10px;padding:10px 14px;opacity:<?= $opacity ?>;justify-content:flex-start;">
+                            <span style="display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.4);font-weight:700;font-size:12px;"><?= $i + 1 ?></span>
+                            <i class="ti <?= $statusIcons[$st] ?>"></i>
+                            <span class="flex-fill"><?= $statusLabels[$st] ?></span>
+                            <?php if ($done): ?><i class="ti ti-circle-check"></i><?php endif; ?>
+                          </button>
+                        <?php endforeach; ?>
                       </div>
-                      <div class="d-flex flex-wrap gap-1 mb-2">
-                        <a href="driver-receipts?d_id=<?= $d_id ?>" class="btn-modern btn-outline-modern" style="flex:1;min-width:30%;font-size:12px;padding:6px;"><i class="ti ti-file"></i> Receipts</a>
-                        <a href="driver-pod?d_id=<?= $d_id ?>"      class="btn-modern btn-primary-modern" style="flex:1;min-width:30%;font-size:12px;padding:6px;"><i class="ti ti-camera"></i> POD</a>
-                        <a href="driver-gateless?d_id=<?= $d_id ?>" class="btn-modern btn-outline-modern" style="flex:1;min-width:30%;font-size:12px;padding:6px;"><i class="ti ti-map-pin"></i> Gateless</a>
-                      </div>
+
+                      <small class="text-muted d-block mb-1"><i class="ti ti-files"></i> Documents &amp; alt-flows</small>
                       <div class="d-flex flex-wrap gap-1 mb-3">
-                        <a href="driver-jackup?d_id=<?= $d_id ?>"   class="btn-modern btn-outline-modern" style="flex:1;min-width:30%;font-size:12px;padding:6px;"><i class="ti ti-trailer"></i> Jack-up</a>
+                        <a href="driver-receipts?d_id=<?= $d_id ?>" class="btn-modern btn-outline-modern" style="flex:1;min-width:48%;font-size:12px;padding:6px;"><i class="ti ti-file"></i> Receipts</a>
+                        <?php
+                          $podActive = ($latestStage === 'delivered');
+                          $podCls    = $podActive ? 'btn-primary-modern' : 'btn-outline-modern';
+                          $podStyle  = $podActive ? '' : 'opacity:0.55;';
+                          $podTitle  = $podActive ? 'Capture proof of delivery' : 'Becomes the next step after you tap Delivered';
+                        ?>
+                        <a href="driver-pod?d_id=<?= $d_id ?>" class="btn-modern <?= $podCls ?>" title="<?= htmlspecialchars($podTitle) ?>" style="flex:1;min-width:48%;font-size:12px;padding:6px;<?= $podStyle ?>"><i class="ti ti-camera"></i> POD<?php if ($podActive): ?> &mdash; next<?php endif; ?></a>
+                        <a href="driver-gateless?d_id=<?= $d_id ?>" class="btn-modern btn-outline-modern" style="flex:1;min-width:48%;font-size:12px;padding:6px;opacity:0.7;" title="No gate at destination? Capture GPS + photos here instead of POD."><i class="ti ti-map-pin"></i> Gateless</a>
+                        <a href="driver-jackup?d_id=<?= $d_id ?>" class="btn-modern btn-outline-modern" style="flex:1;min-width:48%;font-size:12px;padding:6px;opacity:0.7;" title="Detach trailer at site (billing keeps running)"><i class="ti ti-trailer"></i> Jack-up</a>
+                      </div>
+                    <?php elseif ($isAwaiting): ?>
+                      <div class="alert alert-info mb-3" style="padding:10px 14px;">
+                        <i class="ti ti-clock"></i> Awaiting dispatcher verification of your POD. You'll get a push notification once it's confirmed.
+                      </div>
+                    <?php elseif ($isCompleted): ?>
+                      <div class="alert alert-success mb-3" style="padding:10px 14px;">
+                        <i class="ti ti-circle-check"></i> Trip completed. Nothing more to do.
                       </div>
                     <?php endif; ?>
 
