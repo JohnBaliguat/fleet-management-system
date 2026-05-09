@@ -323,10 +323,10 @@ if (isset($_SESSION['user_type']) && $_SESSION['user_type'] === "Driver") {
         <i class="ti ti-clipboard-list"></i>
         <span>Reports</span>
       </a>
-      <button onclick="sosAlert()" class="nav-item sos-btn">
+      <a href="driver-breakdown" class="nav-item sos-btn" style="color:#dc3545;">
         <i class="ti ti-alert-triangle"></i>
         <span>SOS</span>
-      </button>
+      </a>
     </div>
 
   </div>
