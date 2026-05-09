@@ -509,6 +509,105 @@ need to:
   works on the schema; broadcasting from the dispatcher side is a
   small follow-up UI.
 
+---
+
+## Phase 6 — Billing close, trip receipts, client notify, push wiring *(in progress)*
+
+The final phase wraps the 9-stage workflow loop. With this in,
+`Order Created → Dispatcher Assigns → Driver Accepts → Gate Clearance →
+En Route → Delivered → POD Captured → Billing Closed → Client Notified`
+is end-to-end with a visible audit trail per booking.
+
+### Schema migration
+
+[migrations/002_phase6_billing_receipts_notifications.sql](migrations/002_phase6_billing_receipts_notifications.sql) — additive only.
+
+| Table / column                          | Purpose                                                       |
+| --------------------------------------- | ------------------------------------------------------------- |
+| `dispatch_receipt`                      | Files attached to a dispatch (manifest, gate pass, customs, etc.). Driver must Acknowledge before going en-route if `requires_ack = 1` |
+| `receipt_acknowledge`                   | Per-driver tap audit; unique on `(dr_id, driver_id)`          |
+| `push_send_log`                         | Append-only audit of every outbound notification (webpush / email / sms) and its outcome |
+| `customer.notify_email` + `notify_phone`| Contact channels for the *Client Notified* step                |
+| `dispatch.billing_amount` + `billing_currency` + `billing_notes` | Snapshot of the closed bill so historical totals don't have to be re-derived |
+
+Run with: `mysql -u root ptsifleet_db2 < migrations/002_phase6_billing_receipts_notifications.sql`
+
+### Trip Receipts (the spec's "View Trip Receipts" feature)
+
+| File | Purpose |
+|---|---|
+| [save_dispatch_receipt.php](php/operations/save_dispatch_receipt.php) | Dispatcher upload (PDF or image) → `php/assets/uploads/receipts/` |
+| [acknowledge_receipt.php](php/operations/acknowledge_receipt.php) | Driver tap → upserts a `receipt_acknowledge` row |
+| [dispatch_receipts.php](php/fetch/dispatch_receipts.php) | Read API — drivers can only see their own dispatches |
+| [driver/receipts.php](driver/receipts.php) | Mobile viewer with per-receipt Acknowledge button |
+| [dispatcher/dispatch-receipts.php](dispatcher/dispatch-receipts.php) + [admin/dispatch-receipts.php](admin/dispatch-receipts.php) | Upload UI keyed by `?d_id=` (shared body in [php/assets/dispatch_receipts_body.php](php/assets/dispatch_receipts_body.php)) |
+
+**The en-route gate is enforced.** [driver_update_status.php](php/operations/driver_update_status.php) now refuses any `picked_up`/`on_the_way` transition while there are unacknowledged `requires_ack=1` receipts on the dispatch — returns HTTP 409 with the list of missing acks. The driver dashboard's status pill displays the resulting Swal error.
+
+### Billing close + client notification
+
+| File | Purpose |
+|---|---|
+| [close_billing.php](php/operations/close_billing.php) | Atomic transaction: stamps `billing_closed_at`, snapshots `billing_amount/currency/notes`, advances `workflow_stage`. With `notify_client=1` it also stamps `client_notified_at` on both `dispatch` and `booking`, advances to `client_notified`, and calls `pt_notify_client()` for email + sms attempts |
+| [billing_pending.php](php/fetch/billing_pending.php) | Lists deliverable / closed dispatches with notify-readiness (does the customer have email/phone configured?) |
+| [dispatcher/billing.php](dispatcher/billing.php) + [admin/billing.php](admin/billing.php) | Filterable table (Ready to close / Closed / All), close modal with currency, amount, notes, and a "Also notify client" switch (shared body in [php/assets/billing_body.php](php/assets/billing_body.php)) |
+
+### Workflow timeline page
+
+| File | Purpose |
+|---|---|
+| [workflow_timeline.php](php/fetch/workflow_timeline.php) | Booking summary + every dispatch under it + every `workflow_event` row chronologically |
+| [dispatcher/workflow.php](dispatcher/workflow.php) + [admin/workflow.php](admin/workflow.php) | The 9-stage pipeline rendered as horizontal pills (done / current / pending), the dispatch table, and a vertical timeline of audit events. Deep-linkable via `?bn=PTSIBN-00001` (shared body in [php/assets/workflow_body.php](php/assets/workflow_body.php)) |
+
+### Push dispatcher (server-side)
+
+[php/operations/_push_send.php](php/operations/_push_send.php) is the new outbound notification hub:
+
+- `pt_notify_driver()` — Web Push to all of the driver's saved subscriptions. Lazy-loads VAPID keys from `php/config/vapid.php` and the optional `Minishlink\WebPush\WebPush` library. If either is missing, the call is logged in `push_send_log` with `outcome='queued'` and `error='VAPID not configured'` — no exceptions, the calling endpoint succeeds.
+- `pt_notify_client()` — looks up `customer.notify_email`/`notify_phone`, sends email via PHP's `mail()`, logs SMS as `outcome='skipped'` (real gateway is out of scope here).
+- `pt_notify_dispatchers()` — writes an audit row with `channel='inapp'`; a future dispatcher PWA (or a small SSE bridge) can read these for live banners.
+
+Wired into the existing endpoints:
+
+| Endpoint | Notification |
+|---|---|
+| [incident_reassign.php](php/operations/incident_reassign.php) | New driver → "New job assigned"; dispatchers → audit |
+| [gate_queue_decide.php](php/operations/gate_queue_decide.php) | Driver → "Gate approved/denied" |
+| [driver_decline_job.php](php/operations/driver_decline_job.php) | Dispatchers → "Driver declined" |
+| [save_breakdown.php](php/operations/save_breakdown.php) | Dispatchers → urgent breakdown alert |
+| [close_billing.php](php/operations/close_billing.php) | Driver → "Billing closed"; client → email |
+
+### Routes added
+
+Admin: `billing`, `workflow`, `dispatchReceipts`. Dispatcher:
+`dispatch-billing`, `dispatch-workflow`, `dispatch-receipts`. Driver:
+`driver-receipts`. Sidebar links wired in both admin and dispatcher.
+
+### To turn push on for real
+
+1. `cp php/config/vapid.example.php php/config/vapid.php`
+2. `npx web-push generate-vapid-keys` and paste the values.
+3. `composer require minishlink/web-push` at the project root.
+
+After that, every Phase 6 wiring point starts delivering real Web
+Push notifications without any code change — `_push_send.php` detects
+the library and VAPID config at runtime.
+
+### Things deferred
+
+- **Live SSE / WebSocket panel for dispatchers** — `pt_notify_dispatchers`
+  already lands an `inapp` audit row; a small `EventSource`-fed banner
+  on the dispatcher dashboard would surface them.
+- **SMS gateway** — `customer.notify_phone` is captured and the SMS
+  send is logged with `outcome='skipped'`. Wiring to Twilio (or a
+  local provider) is a 30-line follow-up in `pt_send_sms()`.
+- **Receipt revoke** — receipts can be added but not removed. A small
+  delete endpoint behind dispatcher auth will round it out.
+- **Per-leg billing rollup** — `dispatch.billing_amount` is a single
+  snapshot per dispatch. Multi-segment bookings can have different
+  customers per leg; surfacing per-leg subtotals keyed off
+  `trips.segment_costumer` is a follow-up.
+
 ## Phase 6 — Billing close + client notify *(planned)*
 
 - New `billing/` module: closes a dispatch by stamping

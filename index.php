@@ -38,6 +38,9 @@ $routes = [
     'segment' => 'admin/segment.php',
     'bookingSegments' => 'admin/booking-segments.php',
     'incidents' => 'admin/incidents.php',
+    'billing' => 'admin/billing.php',
+    'workflow' => 'admin/workflow.php',
+    'dispatchReceipts' => 'admin/dispatch-receipts.php',
     'profile' => 'admin/profile.php',
     'logout' => 'logout.php',
     'login' => 'login.php',
@@ -81,6 +84,9 @@ $routes = [
     'dispatch-segment' => 'dispatcher/segment.php',
     'dispatch-bookingSegments' => 'dispatcher/booking-segments.php',
     'dispatch-incidents' => 'dispatcher/incidents.php',
+    'dispatch-billing' => 'dispatcher/billing.php',
+    'dispatch-workflow' => 'dispatcher/workflow.php',
+    'dispatch-receipts' => 'dispatcher/dispatch-receipts.php',
     'dispatch-profile' => 'dispatcher/profile.php',
     // Gate-Guard routes
     'gate-dashboard' => 'gate/dashboard.php',
@@ -103,6 +109,8 @@ $routes = [
     'driver-jackup' => 'driver/jackup.php',
     'driver-breakdown' => 'driver/breakdown.php',
     'driver-messages' => 'driver/messages.php',
+    // Phase 6 — Driver receipts
+    'driver-receipts' => 'driver/receipts.php',
     // Shop routes
     'shop-dashboard' => 'shop/dashboard.php',
     'shop-rescue' => 'shop/rescue.php',

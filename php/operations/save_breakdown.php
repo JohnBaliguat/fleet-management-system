@@ -3,6 +3,7 @@ require __DIR__ . '/_driver_auth.php';
 $driverId = require_driver_session();
 require_post();
 include __DIR__ . '/../config/config.php';
+require_once __DIR__ . '/_push_send.php';
 
 $dId        = (int)($_POST['d_id'] ?? 0);
 $type       = trim($_POST['incident_type'] ?? 'breakdown');
@@ -47,5 +48,8 @@ $stmt = $conn->prepare("INSERT INTO workflow_event (d_id, booking_no, stage, act
 $stmt->bind_param("isis", $dId, $bn, $driverId, $notes);
 $stmt->execute();
 $stmt->close();
+
+// Phase 6 — push to dispatchers' notification log.
+pt_notify_dispatchers($conn, ($severity === 'high' ? '🚨 ' : '') . "Driver $type", $desc, $dId ?: null);
 
 json_out(['status' => 'success', 'message' => 'Reported. Dispatcher has been notified.', 'inc_id' => $incId]);

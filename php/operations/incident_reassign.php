@@ -2,6 +2,7 @@
 header('Content-Type: application/json');
 session_start();
 include __DIR__ . '/../config/config.php';
+require_once __DIR__ . '/_push_send.php';
 
 $role = $_SESSION['user_type'] ?? '';
 if (!in_array($role, ['Dispatcher', 'Admin'], true)) {
@@ -139,6 +140,16 @@ try {
     echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
     exit;
 }
+
+// Phase 6 — push the new driver about the reassignment.
+pt_notify_driver(
+    $conn,
+    $newDriverId,
+    'New job assigned',
+    "Booking {$origDispatch['booking_no']} re-assigned to you (incident #$incId).",
+    $newDId
+);
+pt_notify_dispatchers($conn, "Re-assigned: {$origDispatch['booking_no']}", "Dispatch #$origDId &rarr; #$newDId via incident #$incId", $newDId);
 
 echo json_encode([
     'status'   => 'success',

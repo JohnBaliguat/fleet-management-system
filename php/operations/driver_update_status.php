@@ -24,6 +24,28 @@ if (!$row || (int)$row['driver_id'] !== $driverId) {
     json_out(['status' => 'error', 'message' => 'Dispatch not assigned to you'], 403);
 }
 
+// Phase 6 — receipt acknowledgement gate before going en-route.
+// Spec: "Must tap acknowledge before going en-route if required."
+if (in_array($status, ['picked_up', 'on_the_way'], true)) {
+    $stmt = $conn->prepare(
+        "SELECT r.dr_id, r.title, r.receipt_type
+         FROM dispatch_receipt r
+         LEFT JOIN receipt_acknowledge a ON a.dr_id = r.dr_id AND a.driver_id = ?
+         WHERE r.d_id = ? AND r.requires_ack = 1 AND a.ra_id IS NULL"
+    );
+    $stmt->bind_param("ii", $driverId, $dId);
+    $stmt->execute();
+    $unackd = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+    $stmt->close();
+    if (!empty($unackd)) {
+        json_out([
+            'status'  => 'error',
+            'message' => 'Acknowledge ' . count($unackd) . ' receipt(s) before going en-route.',
+            'unacknowledged' => $unackd,
+        ], 409);
+    }
+}
+
 // Map driver-tap statuses to workflow stages.
 $stageMap = [
     'picked_up'  => 'en_route',     // first tap kicks off movement

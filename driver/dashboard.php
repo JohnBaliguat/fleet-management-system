@@ -170,9 +170,12 @@ if (isset($_SESSION['user_type']) && $_SESSION['user_type'] === "Driver") {
                         <button class="btn-modern btn-outline-modern phase5-status" data-id="<?= $d_id ?>" data-st="arrived"    style="flex:1;min-width:42%;font-size:12px;padding:6px;">Arrived</button>
                         <button class="btn-modern btn-success-modern phase5-status" data-id="<?= $d_id ?>" data-st="delivered"  style="flex:1;min-width:42%;font-size:12px;padding:6px;">Delivered</button>
                       </div>
-                      <div class="d-flex flex-wrap gap-1 mb-3">
+                      <div class="d-flex flex-wrap gap-1 mb-2">
+                        <a href="driver-receipts?d_id=<?= $d_id ?>" class="btn-modern btn-outline-modern" style="flex:1;min-width:30%;font-size:12px;padding:6px;"><i class="ti ti-file"></i> Receipts</a>
                         <a href="driver-pod?d_id=<?= $d_id ?>"      class="btn-modern btn-primary-modern" style="flex:1;min-width:30%;font-size:12px;padding:6px;"><i class="ti ti-camera"></i> POD</a>
                         <a href="driver-gateless?d_id=<?= $d_id ?>" class="btn-modern btn-outline-modern" style="flex:1;min-width:30%;font-size:12px;padding:6px;"><i class="ti ti-map-pin"></i> Gateless</a>
+                      </div>
+                      <div class="d-flex flex-wrap gap-1 mb-3">
                         <a href="driver-jackup?d_id=<?= $d_id ?>"   class="btn-modern btn-outline-modern" style="flex:1;min-width:30%;font-size:12px;padding:6px;"><i class="ti ti-trailer"></i> Jack-up</a>
                       </div>
                     <?php endif; ?>

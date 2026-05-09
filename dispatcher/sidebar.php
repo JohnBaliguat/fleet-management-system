@@ -408,6 +408,18 @@
               </a>
             </li>
             <li class="sidebar-item">
+              <a class="sidebar-link" href="dispatch-billing" aria-expanded="false">
+                <i class="ti ti-receipt"></i>
+                <span class="hide-menu">Billing</span>
+              </a>
+            </li>
+            <li class="sidebar-item">
+              <a class="sidebar-link" href="dispatch-workflow" aria-expanded="false">
+                <i class="ti ti-timeline"></i>
+                <span class="hide-menu">Workflow Timeline</span>
+              </a>
+            </li>
+            <li class="sidebar-item">
               <a class="sidebar-link" href="dispatch-segment" aria-expanded="false">
                 <i class="ti ti-list-details"></i>
                 <span class="hide-menu">Segment/location</span>
