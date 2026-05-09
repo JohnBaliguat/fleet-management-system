@@ -140,6 +140,43 @@ if ($verified && $authorised) {
 // If a queue row exists for this dispatch, mark it consumed.
 $conn->query("UPDATE gate_queue SET decision='consumed', decided_at=NOW(), decided_by=$guardUserId WHERE d_id=$dId AND decision IN ('approved','pending')");
 
+// Phase 7 — keep equipment current_location in sync with scans.
+// Guard's session is expected to have user_assignLocation = the base
+// they're working at (PTSI Base / Consol Base / etc.). On IN, the
+// equipment is "at this base"; on OUT, it's "In Transit".
+$baseName = '';
+if (!empty($guardUserId)) {
+    $stmt = $conn->prepare("SELECT user_assignLocation FROM user WHERE user_id = ? LIMIT 1");
+    $stmt->bind_param("i", $guardUserId);
+    $stmt->execute();
+    $r = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+    if ($r && !empty($r['user_assignLocation'])) {
+        $baseName = $r['user_assignLocation'];
+    }
+}
+$base = ($baseName !== '') ? $baseName : 'PTSI Base';
+$newLoc = $direction === 'IN' ? $base : 'In Transit';
+
+if ($truckPlate !== '') {
+    $stmt = $conn->prepare("UPDATE units SET current_location = ?, current_location_updated_at = NOW() WHERE unit_name = ? AND unit_type = 'truck'");
+    $stmt->bind_param("ss", $newLoc, $truckPlate);
+    $stmt->execute();
+    $stmt->close();
+}
+if ($gensetCode !== '') {
+    $stmt = $conn->prepare("UPDATE units SET current_location = ?, current_location_updated_at = NOW() WHERE unit_name = ? AND unit_type = 'genset'");
+    $stmt->bind_param("ss", $newLoc, $gensetCode);
+    $stmt->execute();
+    $stmt->close();
+}
+if ($trailerCode !== '') {
+    $stmt = $conn->prepare("UPDATE trailer SET current_base = ?, current_base_updated_at = NOW() WHERE trailer_name = ?");
+    $stmt->bind_param("ss", $newLoc, $trailerCode);
+    $stmt->execute();
+    $stmt->close();
+}
+
 $msg = $verified
     ? ($authorised ? "Logged $direction successfully." : "Logged $direction (driver was NOT pre-authorised by dispatcher).")
     : "Logged $direction with MISMATCH — see reason.";

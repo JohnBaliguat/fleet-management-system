@@ -41,6 +41,8 @@ $routes = [
     'billing' => 'admin/billing.php',
     'workflow' => 'admin/workflow.php',
     'dispatchReceipts' => 'admin/dispatch-receipts.php',
+    'verifications' => 'admin/verifications.php',
+    'equipment' => 'admin/equipment.php',
     'profile' => 'admin/profile.php',
     'logout' => 'logout.php',
     'login' => 'login.php',
@@ -87,6 +89,8 @@ $routes = [
     'dispatch-billing' => 'dispatcher/billing.php',
     'dispatch-workflow' => 'dispatcher/workflow.php',
     'dispatch-receipts' => 'dispatcher/dispatch-receipts.php',
+    'dispatch-verifications' => 'dispatcher/verifications.php',
+    'dispatch-equipment' => 'dispatcher/equipment.php',
     'dispatch-profile' => 'dispatcher/profile.php',
     // Gate-Guard routes
     'gate-dashboard' => 'gate/dashboard.php',

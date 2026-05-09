@@ -608,6 +608,137 @@ the library and VAPID config at runtime.
   customers per leg; surfacing per-leg subtotals keyed off
   `trips.segment_costumer` is a follow-up.
 
+---
+
+## Phase 7 — Shift, dispatcher gate, POD verification, equipment locations *(in progress)*
+
+Tightens the operational loop the user described:
+*Shift → eligible-drivers filter → Trip timer on accept → Gate
+confirmation with equipment record → Delivered → Pending Verification
+→ Dispatcher Verification → Completed*.
+
+### Schema migration
+
+[migrations/003_phase7_shift_verification_locations.sql](migrations/003_phase7_shift_verification_locations.sql) — additive only.
+
+| Table / column                                                       | Purpose |
+| -------------------------------------------------------------------- | ------- |
+| `drivers.shift_ended_at`                                             | Pair with `shift_started_at` to mirror the active shift on the drivers row |
+| `driver_shift` (new)                                                 | Historical shift records: `started_at`, `ended_at`, `truck_code`, `machine_hours`, `pdc_id` |
+| `dispatch.trip_started_at` / `trip_completed_at`                     | Dedicated trip-timer columns; backfilled from `driver_accepted_at` |
+| `dispatch.verified_by` / `verified_at` / `verification_notes`        | Dispatcher's POD verification audit |
+| `units.current_location` / `current_location_updated_at`             | Where each truck/genset is right now (PTSI Base / Consol Base / In Transit / …) |
+| `trailer.current_base` / `current_base_updated_at`                   | Same for trailers |
+| `pod_capture.verified_by` / `verified_at` / `verification_notes`     | Mirrors the audit on the POD row itself |
+
+### Driver shift & attendance
+
+- `save_pre_departure.php` now opens a fresh `driver_shift` row on
+  every checklist completion. Any unfinished shift on the same driver
+  is auto-closed so machine-hour data isn't lost.
+- New endpoint **[end_shift.php](php/operations/end_shift.php)** —
+  driver clicks End Shift → closes the open `driver_shift` row and
+  computes `machine_hours = ROUND((ended_at - started_at) / 60, 2)`.
+  Refuses if the driver has an in-flight job (HTTP 409 with the
+  blocking booking number); they have to finish or hand off first.
+- Driver dashboard surfaces a shift banner above the stats grid:
+  green when active (with truck + start time + End Shift button),
+  amber when not (with a Start Shift link to the checklist).
+
+### Eligibility filter for dispatching
+
+New endpoint **[dispatchable_drivers.php](php/fetch/dispatchable_drivers.php)**
+returns only drivers who:
+
+1. Have an open `driver_shift` (or a `drivers_attendance` row with
+   `da_status='Present'` for today), AND
+2. Have a non-empty `drivers.shift_truck`.
+
+The dispatcher dashboard's new **Dispatchable Drivers** tile (count
++ link) reads this. Wiring it into the existing dispatch.php picker
+is a follow-up — the endpoint is the lever. Filtering is a
+client-side change away.
+
+### Trip timer
+
+`driver_accept_job.php` already stamps `driver_accepted_at`; the new
+migration backfills `trip_started_at` to mirror it. The dispatcher's
+verification page surfaces trip duration as `trip_minutes`. On
+verify, **[verify_pod.php](php/operations/verify_pod.php)** stamps
+`trip_completed_at = NOW()` so reports can use one column without a
+join.
+
+### Gate confirmation → equipment location
+
+`gate_checkin.php` (Phase 3) already verifies truck + trailer + genset
+match the dispatch. Phase 7 adds: on a successful scan, also update
+the equipment's `current_location`:
+
+- IN at PTSI's gate → equipment set to **PTSI Base** (or whatever the
+  guard's `user_assignLocation` says — Consol Base etc.).
+- OUT → equipment set to **In Transit**.
+
+Source of truth for the base name is the gate guard's user account's
+`user_assignLocation` column.
+
+### Equipment Locations panel
+
+New page (admin + dispatcher) at **[equipment.php](dispatcher/equipment.php)**
+backed by **[equipment_locations.php](php/fetch/equipment_locations.php)**.
+Lists trucks / gensets / trailers grouped by current base, with a
+filter input. Auto-refreshes every 30 s.
+
+### Delivered → Pending Verification → Completed
+
+**`save_pod.php` was changed** so a POD submission no longer flips
+the workflow straight to `pod_captured`. It now lands at
+**`pending_verification`** with a `workflow_event` of the same name.
+The driver's dashboard card shows the new label.
+
+New page **[verifications.php](dispatcher/verifications.php)**
+(shared body in [verifications_body.php](php/assets/verifications_body.php)) lists every dispatch
+at `pending_verification` with:
+
+- The 2–3 POD photos (zoom-in on click).
+- The recipient signature image + typed name.
+- A clickable Google-Maps link to the captured POD GPS.
+- Trip duration (minutes elapsed since the driver accepted).
+
+**Verify** (button) → **[verify_pod.php](php/operations/verify_pod.php)**
+flips `workflow_stage = 'pod_captured'`, stamps `trip_completed_at`,
+fills `verified_by` / `verified_at` / `verification_notes` on both
+`dispatch` and `pod_capture`, emits a `pod_captured` workflow_event,
+and pushes the driver "Trip completed".
+
+**Reject** kicks the dispatch back to `en_route`, emits a
+`pod_rejected` event, and pushes the driver "POD needs re-do" with
+the reason. The driver can then re-capture from the same POD page.
+
+### Dashboard surfacing
+
+[dispatcher/dashboard.php](dispatcher/dashboard.php) now has a
+4-up tile row: Gate Queue / Open Incidents / **Pending Verification**
+/ **Dispatchable Drivers**. All four poll every 15 s and link to the
+respective page.
+
+### Routes added
+
+Admin: `verifications`, `equipment`. Dispatcher:
+`dispatch-verifications`, `dispatch-equipment`. Sidebars updated
+in both roles.
+
+### Things deferred
+
+- **Wiring the dispatch.php driver-picker to dispatchable_drivers**
+  — the giant 76 KB file is risky to touch; the endpoint is ready
+  for a small JS replacement.
+- **Per-truck machine-hour history page** — the `driver_shift` rows
+  carry the data; a small report rolls it up by `truck_code` over
+  any range.
+- **Auto-close stale shifts** — a nightly cron that closes any
+  open `driver_shift` older than 24 h would prevent runaway hours
+  if a driver forgets to tap End Shift.
+
 ## Phase 6 — Billing close + client notify *(planned)*
 
 - New `billing/` module: closes a dispatch by stamping

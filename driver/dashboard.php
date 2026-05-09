@@ -44,8 +44,41 @@ if (isset($_SESSION['user_type']) && $_SESSION['user_type'] === "Driver") {
         <?php include 'navbar.php'; ?>
       <div class="container-fluid">
         
+        <?php
+          // Phase 7 — Shift status banner.
+          include "php/config/config.php";
+          $driverId = (int)$_SESSION['user_id'];
+          $shift = null;
+          $stmtS = $conn->prepare("SELECT ds_id, truck_code, started_at FROM driver_shift WHERE driver_id = ? AND ended_at IS NULL ORDER BY ds_id DESC LIMIT 1");
+          $stmtS->bind_param("i", $driverId);
+          $stmtS->execute();
+          $shift = $stmtS->get_result()->fetch_assoc();
+          $stmtS->close();
+        ?>
+        <div class="card mt-5 <?= $shift ? 'border-success' : 'border-warning' ?>" style="border-width:2px;">
+          <div class="card-body d-flex align-items-center gap-3" style="padding:14px;">
+            <i class="ti <?= $shift ? 'ti-truck-delivery' : 'ti-alert-triangle' ?> fs-3 <?= $shift ? 'text-success' : 'text-warning' ?>"></i>
+            <div class="flex-fill">
+              <?php if ($shift): ?>
+                <div class="fw-bold">Shift active &mdash; truck <?= htmlspecialchars($shift['truck_code']) ?></div>
+                <div class="text-muted small">Started <?= htmlspecialchars($shift['started_at']) ?></div>
+              <?php else: ?>
+                <div class="fw-bold">No active shift</div>
+                <div class="text-muted small">Run the pre-departure checklist to start.</div>
+              <?php endif; ?>
+            </div>
+            <?php if ($shift): ?>
+              <button class="btn-modern btn-outline-modern" id="endShiftBtn" style="width:auto;padding:8px 14px;border-color:#dc3545;color:#dc3545;">
+                <i class="ti ti-power"></i> End Shift
+              </button>
+            <?php else: ?>
+              <a href="driver-checklist" class="btn-modern btn-primary-modern" style="width:auto;padding:8px 14px;">Start Shift</a>
+            <?php endif; ?>
+          </div>
+        </div>
+
         <!-- Stats Overview -->
-        <div class="stats-grid mb-4 mt-5">
+        <div class="stats-grid mb-4 mt-3">
           <div class="stat-card">
             <div class="stat-icon">
               <i class="ti ti-clock"></i>
@@ -124,19 +157,21 @@ if (isset($_SESSION['user_type']) && $_SESSION['user_type'] === "Driver") {
                   $wf = $dispatch['workflow_stage'] ?? 'dispatcher_assigned';
                   $isPending  = in_array($wf, ['dispatcher_assigned', 'reassigned'], true);
                   $isAccepted = in_array($wf, ['driver_accepted', 'gate_cleared', 'en_route'], true);
-                  $isDelivered = in_array($wf, ['delivered', 'pod_captured', 'billing_closed', 'client_notified'], true);
+                  $isAwaiting = $wf === 'pending_verification';
+                  $isCompleted = in_array($wf, ['pod_captured', 'billing_closed', 'client_notified'], true);
                   $wfLabel = [
-                    'dispatcher_assigned' => 'Awaiting your accept',
-                    'reassigned'          => 'Re-assigned to you',
-                    'driver_accepted'     => 'Accepted',
-                    'gate_cleared'        => 'Gate cleared',
-                    'en_route'            => 'En route',
-                    'delivered'           => 'Delivered',
-                    'pod_captured'        => 'POD captured',
-                    'billing_closed'      => 'Billing closed',
-                    'client_notified'     => 'Client notified',
-                    'driver_declined'     => 'Declined',
-                    'reassigned_from'     => 'Superseded',
+                    'dispatcher_assigned'  => 'Awaiting your accept',
+                    'reassigned'           => 'Re-assigned to you',
+                    'driver_accepted'      => 'Accepted',
+                    'gate_cleared'         => 'Gate cleared',
+                    'en_route'             => 'En route',
+                    'delivered'            => 'Delivered',
+                    'pending_verification' => 'Pending Verification',
+                    'pod_captured'         => 'Completed',
+                    'billing_closed'       => 'Completed (Billed)',
+                    'client_notified'      => 'Completed (Notified)',
+                    'driver_declined'      => 'Declined',
+                    'reassigned_from'      => 'Superseded',
                   ][$wf] ?? $wf;
                 ?>
                 <div class="booking-card" data-booking-id="<?= $d_id ?>" data-status="<?= strtolower($statusText) ?>" data-wf="<?= htmlspecialchars($wf) ?>">
@@ -369,6 +404,35 @@ if (isset($_SESSION['user_type']) && $_SESSION['user_type'] === "Driver") {
             if (res.status === 'success' || res.status === 'queued') setTimeout(() => location.reload(), 1600);
           }, 'json');
         });
+    });
+
+    // Phase 7 — End Shift handler. Refuses if there's an in-flight job.
+    $('#endShiftBtn').on('click', function () {
+      Swal.fire({
+        title: 'End your shift?',
+        text: 'Machine hours will be recorded based on start → now.',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Yes, end shift',
+        confirmButtonColor: '#dc3545',
+      }).then(r => {
+        if (!r.isConfirmed) return;
+        $.post('php/operations/end_shift.php', {}, function (res) {
+          const ok = res.status === 'success';
+          Swal.fire({
+            icon: ok ? 'success' : 'warning',
+            title: ok ? 'Shift ended' : '',
+            html: ok ? '<b>Machine hours:</b> ' + res.machine_hours : escapeStr(res.message),
+            confirmButtonColor: '#0d6efd',
+          });
+          if (ok) setTimeout(() => location.reload(), 1500);
+        }, 'json').fail(function (xhr) {
+          let msg = 'Network error';
+          try { msg = (JSON.parse(xhr.responseText) || {}).message || msg; } catch (e) {}
+          Swal.fire({ icon: 'error', text: msg });
+        });
+      });
+      function escapeStr(s){return String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
     });
 
     // Phase 5 — Status pills.

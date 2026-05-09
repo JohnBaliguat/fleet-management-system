@@ -63,16 +63,23 @@ $stmt->bind_param("iiissssssd",
 $stmt->execute();
 $stmt->close();
 
-// Workflow advance: -> pod_captured.
-$stmt = $conn->prepare("UPDATE dispatch SET workflow_stage = 'pod_captured', workflow_updated_at = NOW() WHERE d_id = ? AND workflow_stage IN ('en_route','delivered')");
+// Phase 7 — POD now lands at 'pending_verification'. The dispatcher
+// must explicitly verify before the trip flips to pod_captured /
+// completed. Workflow stays here so it shows up on the verification
+// queue.
+$stmt = $conn->prepare(
+    "UPDATE dispatch
+     SET workflow_stage = 'pending_verification', workflow_updated_at = NOW()
+     WHERE d_id = ? AND workflow_stage IN ('en_route', 'delivered')"
+);
 $stmt->bind_param("i", $dId);
 $stmt->execute();
 $stmt->close();
 
 $bn = $row['booking_no'];
-$stmt = $conn->prepare("INSERT INTO workflow_event (d_id, booking_no, stage, actor_role, actor_id, notes) VALUES (?, ?, 'pod_captured', 'driver', ?, 'POD captured by driver')");
+$stmt = $conn->prepare("INSERT INTO workflow_event (d_id, booking_no, stage, actor_role, actor_id, notes) VALUES (?, ?, 'pending_verification', 'driver', ?, 'POD captured — awaiting dispatcher verification')");
 $stmt->bind_param("isi", $dId, $bn, $driverId);
 $stmt->execute();
 $stmt->close();
 
-json_out(['status' => 'success', 'message' => 'POD saved.']);
+json_out(['status' => 'success', 'message' => 'POD submitted. Awaiting dispatcher verification.']);

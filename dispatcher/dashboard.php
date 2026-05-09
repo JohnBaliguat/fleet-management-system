@@ -180,43 +180,55 @@ if (isset($_SESSION['user_type']) && $_SESSION['user_type'] === "Dispatcher") {
               </div>
             </div>
 
-            <!-- Phase 4: Gate-queue + Incidents at-a-glance -->
+            <!-- Phase 4 + 7: Gate Queue + Incidents + Pending Verification + Dispatchable -->
             <div class="row mt-2">
-              <div class="col-md-6">
+              <div class="col-md-3">
                 <a href="dispatch-gate" class="text-decoration-none">
                   <div class="card overflow-hidden border-warning">
                     <div class="card-body pb-3">
                       <div class="d-flex align-items-center">
-                        <span class="btn btn-warning rounded-circle round-48 hstack justify-content-center text-dark">
-                          <i class="ti ti-door fs-6"></i>
-                        </span>
-                        <div class="ms-3">
-                          <h5 class="mb-0 fw-bolder fs-4 text-dark">Gate Queue (pending)</h5>
-                          <p class="mb-0 text-muted" id="gateQueueLatest">&mdash;</p>
-                        </div>
-                        <div class="ms-auto">
-                          <span id="gateQueueCount" class="badge bg-warning text-dark" style="font-size: 24px; font-weight: 700;">0</span>
-                        </div>
+                        <span class="btn btn-warning rounded-circle round-48 hstack justify-content-center text-dark"><i class="ti ti-door fs-6"></i></span>
+                        <div class="ms-3"><h5 class="mb-0 fw-bolder fs-4 text-dark">Gate Queue</h5><p class="mb-0 text-muted small" id="gateQueueLatest">&mdash;</p></div>
+                        <div class="ms-auto"><span id="gateQueueCount" class="badge bg-warning text-dark" style="font-size:24px;font-weight:700;">0</span></div>
                       </div>
                     </div>
                   </div>
                 </a>
               </div>
-              <div class="col-md-6">
+              <div class="col-md-3">
                 <a href="dispatch-incidents" class="text-decoration-none">
                   <div class="card overflow-hidden border-danger">
                     <div class="card-body pb-3">
                       <div class="d-flex align-items-center">
-                        <span class="btn btn-danger rounded-circle round-48 hstack justify-content-center">
-                          <i class="ti ti-alert-triangle fs-6"></i>
-                        </span>
-                        <div class="ms-3">
-                          <h5 class="mb-0 fw-bolder fs-4 text-dark">Open Incidents</h5>
-                          <p class="mb-0 text-muted" id="incidentLatest">&mdash;</p>
-                        </div>
-                        <div class="ms-auto">
-                          <span id="openIncidentCount" class="badge bg-danger" style="font-size: 24px; font-weight: 700;">0</span>
-                        </div>
+                        <span class="btn btn-danger rounded-circle round-48 hstack justify-content-center"><i class="ti ti-alert-triangle fs-6"></i></span>
+                        <div class="ms-3"><h5 class="mb-0 fw-bolder fs-4 text-dark">Open Incidents</h5><p class="mb-0 text-muted small" id="incidentLatest">&mdash;</p></div>
+                        <div class="ms-auto"><span id="openIncidentCount" class="badge bg-danger" style="font-size:24px;font-weight:700;">0</span></div>
+                      </div>
+                    </div>
+                  </div>
+                </a>
+              </div>
+              <div class="col-md-3">
+                <a href="dispatch-verifications" class="text-decoration-none">
+                  <div class="card overflow-hidden border-info">
+                    <div class="card-body pb-3">
+                      <div class="d-flex align-items-center">
+                        <span class="btn btn-info rounded-circle round-48 hstack justify-content-center"><i class="ti ti-clipboard-check fs-6"></i></span>
+                        <div class="ms-3"><h5 class="mb-0 fw-bolder fs-4 text-dark">Pending Verification</h5><p class="mb-0 text-muted small">POD review queue</p></div>
+                        <div class="ms-auto"><span id="pendingVerifyCount" class="badge bg-info" style="font-size:24px;font-weight:700;">0</span></div>
+                      </div>
+                    </div>
+                  </div>
+                </a>
+              </div>
+              <div class="col-md-3">
+                <a href="dispatch-equipment" class="text-decoration-none">
+                  <div class="card overflow-hidden border-success">
+                    <div class="card-body pb-3">
+                      <div class="d-flex align-items-center">
+                        <span class="btn btn-success rounded-circle round-48 hstack justify-content-center"><i class="ti ti-users fs-6"></i></span>
+                        <div class="ms-3"><h5 class="mb-0 fw-bolder fs-4 text-dark">Dispatchable Drivers</h5><p class="mb-0 text-muted small">On shift, with truck</p></div>
+                        <div class="ms-auto"><span id="dispatchableCount" class="badge bg-success" style="font-size:24px;font-weight:700;">0</span></div>
                       </div>
                     </div>
                   </div>
@@ -248,6 +260,14 @@ if (isset($_SESSION['user_type']) && $_SESSION['user_type'] === "Dispatcher") {
                   } else {
                     $('#incidentLatest').text('No incidents.');
                   }
+                });
+                $.getJSON('php/fetch/pending_verifications.php', function(res){
+                  if (res.status !== 'success') return;
+                  $('#pendingVerifyCount').text(res.rows.length);
+                });
+                $.getJSON('php/fetch/dispatchable_drivers.php', function(res){
+                  if (res.status !== 'success') return;
+                  $('#dispatchableCount').text(res.count);
                 });
               }
               $(pollPhase4);

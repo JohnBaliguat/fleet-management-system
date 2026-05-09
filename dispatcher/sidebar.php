@@ -408,6 +408,18 @@
               </a>
             </li>
             <li class="sidebar-item">
+              <a class="sidebar-link" href="dispatch-verifications" aria-expanded="false">
+                <i class="ti ti-clipboard-check"></i>
+                <span class="hide-menu">Trip Verification</span>
+              </a>
+            </li>
+            <li class="sidebar-item">
+              <a class="sidebar-link" href="dispatch-equipment" aria-expanded="false">
+                <i class="ti ti-truck"></i>
+                <span class="hide-menu">Equipment Locations</span>
+              </a>
+            </li>
+            <li class="sidebar-item">
               <a class="sidebar-link" href="dispatch-billing" aria-expanded="false">
                 <i class="ti ti-receipt"></i>
                 <span class="hide-menu">Billing</span>

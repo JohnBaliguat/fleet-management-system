@@ -27,12 +27,31 @@ $stmt = $conn->prepare(
 $stmt->bind_param("isssiiiiis",
     $driverId, $truck, $trailer, $genset, $fuel, $tyres, $lights, $cargo, $gens, $remarks);
 $stmt->execute();
+$pdcId = $stmt->insert_id;
 $stmt->close();
 
-// Mark this driver's shift truck.
-$stmt = $conn->prepare("UPDATE drivers SET shift_truck = ?, shift_started_at = NOW() WHERE driver_id = ?");
+// Phase 7 — close any unfinished shift first, then open a fresh one.
+// Marking the previous shift as ended without machine_hours is a
+// safety net; normally the driver taps End Shift cleanly.
+$stmt = $conn->prepare(
+    "UPDATE driver_shift SET ended_at = NOW(),
+        machine_hours = TIMESTAMPDIFF(MINUTE, started_at, NOW()) / 60.0
+     WHERE driver_id = ? AND ended_at IS NULL"
+);
+$stmt->bind_param("i", $driverId);
+$stmt->execute();
+$stmt->close();
+
+$stmt = $conn->prepare("INSERT INTO driver_shift (driver_id, truck_code, started_at, pdc_id) VALUES (?, ?, NOW(), ?)");
+$stmt->bind_param("isi", $driverId, $truck, $pdcId);
+$stmt->execute();
+$stmt->close();
+
+// Drivers row keeps a denormalised pointer so the dispatchable filter
+// stays a single index lookup.
+$stmt = $conn->prepare("UPDATE drivers SET shift_truck = ?, shift_started_at = NOW(), shift_ended_at = NULL WHERE driver_id = ?");
 $stmt->bind_param("si", $truck, $driverId);
 $stmt->execute();
 $stmt->close();
 
-json_out(['status' => 'success', 'message' => 'Checklist saved. You are now Available.']);
+json_out(['status' => 'success', 'message' => 'Shift started. You are now Available.']);
