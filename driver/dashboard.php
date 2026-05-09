@@ -241,13 +241,10 @@ if (isset($_SESSION['user_type']) && $_SESSION['user_type'] === "Driver") {
                         <i class="ti ti-map"></i> Map
                       </button>
                       
-                      <?php if ($status == "Active"): ?>
-                      <button class="btn-modern btn-success-modern flex-fill view-time"
-                              data-id="<?= end($trips)['trip_id'] ?>"
-                              data-container="<?= htmlspecialchars(end($trips)['trip_container'] ?? '') ?>">
-                        <i class="ti ti-check"></i> Complete
-                      </button>
-                      <?php endif; ?>
+                      <?php /* Legacy Complete button removed — Phase 5+ replaces it with the
+                              Accept → status pills → POD → dispatcher verification flow. The
+                              old `view-time` modal at the bottom of this page is still wired so
+                              admin/dispatcher tools that deep-link to it keep working. */ ?>
                     </div>
                   </div>
                 </div>

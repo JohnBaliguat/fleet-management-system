@@ -56,6 +56,14 @@ try {
         $stmt->execute();
         $stmt->close();
 
+        // Keep the legacy trips.trip_status in sync so the driver
+        // dashboard's All / Active / Completed tabs (still keyed off
+        // trip_status) move this card to Completed.
+        $stmt = $conn->prepare("UPDATE trips SET trip_status = 'Done' WHERE d_id = ? AND trip_status <> 'Done'");
+        $stmt->bind_param("i", $dId);
+        $stmt->execute();
+        $stmt->close();
+
         $stage = 'pod_captured';
         $logNote = 'POD verified by ' . $role . ' #' . $actor . ($notes !== '' ? ' — ' . $notes : '');
     } else {
