@@ -17,11 +17,9 @@
     </div>
   </div>
 
-  <script src="assets/libs/jquery/dist/jquery.min.js"></script>
-  <script src="assets/libs/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-  <script src="alert/node_modules/sweetalert2/dist/sweetalert2.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/iconify-icon@1.0.8/dist/iconify-icon.min.js"></script>
   <?php
+    // JS deps now load in _layout_top.php (head) so inline page-body
+    // scripts can use $ / Swal. Only PWA-specific bits stay here.
     $vapidPublicKey = '';
     $vapidFile = __DIR__ . '/../php/config/vapid.php';
     if (file_exists($vapidFile)) { @include $vapidFile; if (defined('VAPID_PUBLIC_KEY')) $vapidPublicKey = VAPID_PUBLIC_KEY; }

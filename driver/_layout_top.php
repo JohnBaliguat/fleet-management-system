@@ -19,6 +19,11 @@ $activeNav = $activeNav ?? 'home';
   <link rel="stylesheet" href="assets/css/enhancements.css" />
   <link rel="stylesheet" href="assets/css/driver-modern.css" />
   <link rel="stylesheet" href="alert/node_modules/sweetalert2/dist/sweetalert2.min.css">
+  <!-- JS deps loaded HERE (head) so inline page-body scripts can use $ / Swal / bootstrap. -->
+  <script src="assets/libs/jquery/dist/jquery.min.js"></script>
+  <script src="assets/libs/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="alert/node_modules/sweetalert2/dist/sweetalert2.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/iconify-icon@1.0.8/dist/iconify-icon.min.js"></script>
 </head>
 <body>
   <div class="page-wrapper" id="main-wrapper">
