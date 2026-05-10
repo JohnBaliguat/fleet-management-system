@@ -16,15 +16,15 @@ $res = mysqli_query($conn, "SELECT location_name FROM location ORDER BY location
 while ($r = mysqli_fetch_assoc($res)) { $locationRows[] = $r; }
 
 $truckRows = [];
-$res = mysqli_query($conn, "SELECT unit_name FROM units WHERE unit_type = 'truck' ORDER BY unit_name ASC");
+$res = mysqli_query($conn, "SELECT unit_name FROM units WHERE unit_type = 'truck' AND maintenance_blocked = 0 ORDER BY unit_name ASC");
 while ($r = mysqli_fetch_assoc($res)) { $truckRows[] = $r; }
 
 $gensetRows = [];
-$res = mysqli_query($conn, "SELECT unit_name FROM units WHERE unit_type = 'genset' ORDER BY unit_name ASC");
+$res = mysqli_query($conn, "SELECT unit_name FROM units WHERE unit_type = 'genset' AND maintenance_blocked = 0 ORDER BY unit_name ASC");
 while ($r = mysqli_fetch_assoc($res)) { $gensetRows[] = $r; }
 
 $trailerRows = [];
-$res = mysqli_query($conn, "SELECT trailer_name FROM trailer ORDER BY trailer_name ASC");
+$res = mysqli_query($conn, "SELECT trailer_name FROM trailer WHERE maintenance_blocked = 0 ORDER BY trailer_name ASC");
 while ($r = mysqli_fetch_assoc($res)) { $trailerRows[] = $r; }
 
 $driverRows = [];

@@ -819,6 +819,97 @@ management page.
   PHP session. Adding `?post_logout_redirect_uri=…` to clear the
   Microsoft cookie too is a one-line follow-up if/when needed.
 
+---
+
+## Phase 10 — Maintenance role + unit blocking *(in progress)*
+
+A new **Maintenance** user role can block trucks, gensets, and
+trailers from being picked for dispatch. Block reasons + costs +
+history are auditable. Dispatch-side pickers refuse blocked units
+automatically.
+
+### Schema migration
+
+[migrations/006_phase10_maintenance.sql](migrations/006_phase10_maintenance.sql) — additive only.
+
+| Table / column                                | Purpose |
+| --------------------------------------------- | ------- |
+| `units.maintenance_blocked` (TINYINT)         | Fast filter flag — denormalised mirror of the open `unit_maintenance` row |
+| `units.maintenance_reason`                    | Free-text shown in pickers / banners |
+| `units.maintenance_expected_return` (DATE)    | When dispatch can expect this unit back |
+| `units.maintenance_blocked_at`                | When the current block started |
+| Same four columns on `trailer`                | Trailers blocked the same way |
+| `unit_maintenance` (new table)                | Append-only history per block event (category, severity, reason, photo, expected_return, cost_labor, cost_parts, release_notes, status) |
+
+The block endpoint also sets `unit_status = 'Under Maintenance'`
+(or `trailer_status = 'Under Maintenance'`) so legacy queries that
+filter on the old status field automatically exclude blocked units.
+
+### Maintenance module
+
+| File | Purpose |
+|---|---|
+| [maintenance/dashboard.php](maintenance/dashboard.php) | Tiles: blocked count / high-severity / overdue return / open cost. Table of currently blocked units. |
+| [maintenance/units.php](maintenance/units.php) | Searchable list of every truck / genset / trailer with Block / Release buttons. Block modal asks for category (engine / brakes / tyres / electrical / body / scheduled / accident / other), severity, expected return, optional photo, and reason. Release modal captures labor + parts cost and notes. |
+| [maintenance/history.php](maintenance/history.php) | Every past block event with duration (auto-computed), cost (labor / parts), category, severity. |
+| [maintenance/profile.php](maintenance/profile.php) | Minimal profile + logout. |
+| [maintenance/sidebar.php](maintenance/sidebar.php) + [navbar.php](maintenance/navbar.php) + [_layout_top.php](maintenance/_layout_top.php) + [_layout_bottom.php](maintenance/_layout_bottom.php) | Role chrome. |
+
+### Backend endpoints
+
+| File | Purpose |
+|---|---|
+| [block_unit.php](php/operations/block_unit.php) | Atomic transaction: inserts `unit_maintenance` row + updates master mirror. Refuses if already blocked. Accepts optional photo upload. |
+| [unblock_unit.php](php/operations/unblock_unit.php) | Closes the latest open `unit_maintenance` row with cost + release notes, resets master mirror to `Good`. |
+| [maintenance_units.php](php/fetch/maintenance_units.php) | List view across trucks / gensets / trailers, filterable by kind / status / code. |
+| [maintenance_active.php](php/fetch/maintenance_active.php) | Currently-active blocks + summary stats (count / high / overdue / cost) for the dashboard tiles. |
+| [maintenance_history.php](php/fetch/maintenance_history.php) | All `unit_maintenance` rows filterable by code. |
+
+### Dispatch-side enforcement
+
+Every picker that previously read trucks / gensets / trailers from
+the master tables now also requires `maintenance_blocked = 0`.
+Updated files:
+
+- [admin/addbooking.php](admin/addbooking.php), [dispatcher/addbooking.php](dispatcher/addbooking.php), [dispatcher/multibooking.php](dispatcher/multibooking.php)
+- [php/fetch/get_trucks.php](php/fetch/get_trucks.php), [get_gensets.php](php/fetch/get_gensets.php), [get_trailers.php](php/fetch/get_trailers.php)
+- [php/assets/incidents_body.php](php/assets/incidents_body.php) (Phase 4 reassign picker)
+- [php/assets/booking_segments_body.php](php/assets/booking_segments_body.php) (Phase 2 segment editor)
+- [driver/checklist.php](driver/checklist.php) (Phase 5 driver shift-truck picker)
+
+### Read-only view for dispatcher / admin
+
+[dispatcher/blocked-units.php](dispatcher/blocked-units.php) and
+[admin/blocked-units.php](admin/blocked-units.php) (shared body in
+[php/assets/blocked_units_body.php](php/assets/blocked_units_body.php)) — same dashboard view as
+the Maintenance role's, no action buttons. Dispatcher dashboard
+gained a **Blocked Units** tile linking here.
+
+### Role wiring
+
+- [admin/user.php](admin/user.php) Add/Edit modals expose **Maintenance** in
+  the user_type dropdown.
+- [login-php.php](login-php.php) routes `user_type = 'Maintenance'` to
+  `maintenance-dashboard`.
+- [ms_sso_callback.php](php/operations/ms_sso_callback.php) does the same for
+  Microsoft SSO users.
+
+### Recommendations not built (deferred)
+
+- **Driver-initiated block request** — driver flags a unit they're
+  using as needing service from the PWA; Maintenance approves before
+  it actually blocks. UX needs design.
+- **Scheduled maintenance triggers** — auto-flag a unit when it hits
+  X machine hours (Phase 7 already captures `driver_shift.machine_hours`
+  per truck, so the data is there) or X km.
+- **Parts inventory linkage** — currently `cost_parts` is a single
+  number; a `unit_maintenance_parts` table with line items would
+  unlock parts reporting.
+- **Push notifications** — when a blocked unit hits its expected
+  return date, ping Maintenance + Dispatcher.
+- **Block-reason analytics** — pre-built chart of failure category
+  over time (currently you can run SQL against `unit_maintenance`).
+
 ## Phase 6 — Billing close + client notify *(planned)*
 
 - New `billing/` module: closes a dispatch by stamping

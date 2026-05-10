@@ -44,6 +44,7 @@ $routes = [
     'verifications' => 'admin/verifications.php',
     'equipment' => 'admin/equipment.php',
     'chat' => 'admin/chat.php',
+    'blocked-units' => 'admin/blocked-units.php',
     'profile' => 'admin/profile.php',
     'logout' => 'logout.php',
     'login' => 'login.php',
@@ -96,6 +97,7 @@ $routes = [
     'dispatch-verifications' => 'dispatcher/verifications.php',
     'dispatch-equipment' => 'dispatcher/equipment.php',
     'dispatch-chat' => 'dispatcher/chat.php',
+    'dispatch-blocked-units' => 'dispatcher/blocked-units.php',
     'dispatch-profile' => 'dispatcher/profile.php',
     // Gate-Guard routes
     'gate-dashboard' => 'gate/dashboard.php',
@@ -104,6 +106,13 @@ $routes = [
     'gate-profile'   => 'gate/profile.php',
     'gate-logout'    => 'logout.php',
     'gate-login'     => 'login.php',
+    // Maintenance role routes
+    'maintenance-dashboard' => 'maintenance/dashboard.php',
+    'maintenance-units'     => 'maintenance/units.php',
+    'maintenance-history'   => 'maintenance/history.php',
+    'maintenance-profile'   => 'maintenance/profile.php',
+    'maintenance-logout'    => 'logout.php',
+    'maintenance-login'     => 'login.php',
     // Driver routes
     'driver-dashboard' => 'driver/dashboard.php',
     'driver-profile' => 'driver/profile.php',

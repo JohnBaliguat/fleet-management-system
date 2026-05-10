@@ -1,10 +1,11 @@
 <?php
 include "../config/config.php";
 
-$sql = "SELECT unit_name 
-        FROM units 
-        WHERE unit_name LIKE 'GS%' 
+$sql = "SELECT unit_name
+        FROM units
+        WHERE unit_name LIKE 'GS%'
           AND unit_status = 'Good'
+          AND maintenance_blocked = 0
         ORDER BY unit_name ASC";
 $result = mysqli_query($conn, $sql);
 

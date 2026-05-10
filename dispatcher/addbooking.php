@@ -137,14 +137,14 @@ if (isset($_SESSION['user_type']) && $_SESSION['user_type'] === "Dispatcher") {
             $driverQuery = "SELECT driver_fname, driver_lname FROM drivers ORDER BY driver_lname ASC";
             $driverResult = mysqli_query($conn, $driverQuery);
 
-            // Get all trucks (units)
-            $truckQuery = "SELECT unit_name FROM units WHERE unit_status = 'good' AND unit_name NOT LIKE 'GS%' ORDER BY unit_name ASC";
+            // Get all trucks (units) — Phase 10: exclude maintenance-blocked.
+            $truckQuery = "SELECT unit_name FROM units WHERE unit_status = 'good' AND maintenance_blocked = 0 AND unit_name NOT LIKE 'GS%' ORDER BY unit_name ASC";
             $truckResult = mysqli_query($conn, $truckQuery);
 
-            $trailerQuery = "SELECT trailer_name FROM trailer WHERE trailer_status = 'good' ORDER BY trailer_name ASC";
+            $trailerQuery = "SELECT trailer_name FROM trailer WHERE trailer_status = 'good' AND maintenance_blocked = 0 ORDER BY trailer_name ASC";
             $trailerResult = mysqli_query($conn, $trailerQuery);
 
-            $gensetQuery = "SELECT unit_name FROM units WHERE unit_status = 'good' AND unit_name LIKE 'GS%' ORDER BY unit_name ASC";
+            $gensetQuery = "SELECT unit_name FROM units WHERE unit_status = 'good' AND maintenance_blocked = 0 AND unit_name LIKE 'GS%' ORDER BY unit_name ASC";
             $gensetResult = mysqli_query($conn, $gensetQuery);
 
             $haulingQuery = "SELECT hauling_segment FROM hauling ORDER BY hauling_id ASC"; 

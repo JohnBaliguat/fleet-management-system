@@ -189,6 +189,7 @@ if (isset($_SESSION['user_type']) && $_SESSION['user_type'] === "Admin") {
                           <option value="Rescue">Rescue</option>
                           <option value="Visual">Visual</option>
                           <option value="Gate-Guard">Gate Guard</option>
+                          <option value="Maintenance">Maintenance</option>
                         </select>
                       </div>
                     </div>
@@ -283,6 +284,7 @@ if (isset($_SESSION['user_type']) && $_SESSION['user_type'] === "Admin") {
                           <option value="HR-Admin">HR Admin</option>
                           <option value="Visual">Visual</option>
                           <option value="Gate-Guard">Gate Guard</option>
+                          <option value="Maintenance">Maintenance</option>
                         </select>
                       </div>
                     </div>

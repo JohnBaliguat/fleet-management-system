@@ -14,15 +14,15 @@ $res = mysqli_query($conn, "SELECT driver_id, CONCAT(driver_lname, ', ', driver_
 while ($r = mysqli_fetch_assoc($res)) { $availableDrivers[] = $r; }
 
 $truckRows = [];
-$res = mysqli_query($conn, "SELECT unit_name FROM units WHERE unit_type='truck' AND unit_status='Good' ORDER BY unit_name ASC");
+$res = mysqli_query($conn, "SELECT unit_name FROM units WHERE unit_type='truck' AND unit_status='Good' AND maintenance_blocked = 0 ORDER BY unit_name ASC");
 while ($r = mysqli_fetch_assoc($res)) { $truckRows[] = $r; }
 
 $gensetRows = [];
-$res = mysqli_query($conn, "SELECT unit_name FROM units WHERE unit_type='genset' AND unit_status='Good' ORDER BY unit_name ASC");
+$res = mysqli_query($conn, "SELECT unit_name FROM units WHERE unit_type='genset' AND unit_status='Good' AND maintenance_blocked = 0 ORDER BY unit_name ASC");
 while ($r = mysqli_fetch_assoc($res)) { $gensetRows[] = $r; }
 
 $trailerRows = [];
-$res = mysqli_query($conn, "SELECT trailer_name FROM trailer WHERE trailer_status='Good' ORDER BY trailer_name ASC");
+$res = mysqli_query($conn, "SELECT trailer_name FROM trailer WHERE trailer_status='Good' AND maintenance_blocked = 0 ORDER BY trailer_name ASC");
 while ($r = mysqli_fetch_assoc($res)) { $trailerRows[] = $r; }
 ?>
 <!doctype html>

@@ -235,6 +235,23 @@ if (isset($_SESSION['user_type']) && $_SESSION['user_type'] === "Dispatcher") {
                 </a>
               </div>
             </div>
+
+            <!-- Phase 10: blocked-units row -->
+            <div class="row mt-2">
+              <div class="col-md-6">
+                <a href="dispatch-blocked-units" class="text-decoration-none">
+                  <div class="card overflow-hidden border-secondary">
+                    <div class="card-body pb-3">
+                      <div class="d-flex align-items-center">
+                        <span class="btn btn-dark rounded-circle round-48 hstack justify-content-center"><i class="ti ti-tools fs-6"></i></span>
+                        <div class="ms-3"><h5 class="mb-0 fw-bolder fs-4 text-dark">Blocked Units (maintenance)</h5><p class="mb-0 text-muted small" id="blockedUnitsLatest">&mdash;</p></div>
+                        <div class="ms-auto"><span id="blockedUnitsCount" class="badge bg-dark" style="font-size:24px;font-weight:700;">0</span></div>
+                      </div>
+                    </div>
+                  </div>
+                </a>
+              </div>
+            </div>
             <script>
             (function(){
               function pollPhase4(){
@@ -268,6 +285,16 @@ if (isset($_SESSION['user_type']) && $_SESSION['user_type'] === "Dispatcher") {
                 $.getJSON('php/fetch/dispatchable_drivers.php', function(res){
                   if (res.status !== 'success') return;
                   $('#dispatchableCount').text(res.count);
+                });
+                $.getJSON('php/fetch/maintenance_active.php', function(res){
+                  if (res.status !== 'success') return;
+                  $('#blockedUnitsCount').text(res.summary.blocked || 0);
+                  if (res.rows && res.rows.length) {
+                    var r = res.rows[0];
+                    $('#blockedUnitsLatest').text(r.unit_code + ' (' + r.unit_kind + ') — ' + r.category);
+                  } else {
+                    $('#blockedUnitsLatest').text('All units available.');
+                  }
                 });
               }
               $(pollPhase4);

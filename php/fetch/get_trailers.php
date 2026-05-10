@@ -1,9 +1,10 @@
 <?php
 include "../config/config.php";
 
-$sql = "SELECT trailer_name 
-        FROM trailer 
+$sql = "SELECT trailer_name
+        FROM trailer
         WHERE trailer_status = 'Good'
+          AND maintenance_blocked = 0
         ORDER BY trailer_name ASC";
 $result = mysqli_query($conn, $sql);
 

@@ -159,6 +159,7 @@ switch ($user['user_type']) {
     case 'HR-Admin':    $dest = 'hra-dashboard';      break;
     case 'Visual':      $dest = 'visual-dashboard';   break;
     case 'Gate-Guard':  $dest = 'gate-dashboard';     break;
+    case 'Maintenance': $dest = 'maintenance-dashboard'; break;
 }
 header('Location: ' . $dest);
 exit;

@@ -23,7 +23,7 @@ $stmt->close();
 
 // Driver's truck options if no active dispatch yet.
 $trucks = [];
-$res = mysqli_query($conn, "SELECT unit_name FROM units WHERE unit_type='truck' AND unit_status='Good' ORDER BY unit_name ASC");
+$res = mysqli_query($conn, "SELECT unit_name FROM units WHERE unit_type='truck' AND unit_status='Good' AND maintenance_blocked = 0 ORDER BY unit_name ASC");
 while ($r = mysqli_fetch_assoc($res)) { $trucks[] = $r['unit_name']; }
 ?>
 <div class="card mt-3"><div class="card-body">
