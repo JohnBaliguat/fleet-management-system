@@ -48,6 +48,9 @@ $routes = [
     'logout' => 'logout.php',
     'login' => 'login.php',
     'index' => 'login.php',
+    // Microsoft (Entra ID) SSO — start + callback.
+    'ms-login'    => 'php/operations/ms_sso_start.php',
+    'ms-callback' => 'php/operations/ms_sso_callback.php',
     // Dispatcher routes
     'dispatch-dashboard' => 'dispatcher/dashboard.php',
     'dispatch-dispatchDashboard' => 'dispatcher/dispatch-dashboard1.php',

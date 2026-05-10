@@ -739,6 +739,86 @@ in both roles.
   open `driver_shift` older than 24 h would prevent runaway hours
   if a driver forgets to tap End Shift.
 
+---
+
+## Phase 9 — Microsoft (Entra ID) work-account SSO *(in progress)*
+
+Adds OpenID Connect login on top of the existing username/password
+flow. Office staff (Admin / Dispatcher / HR / Visual / Gate-Guard)
+can click **Sign in with Microsoft work account** on the login page
+and be authenticated against your tenant. Drivers keep their existing
+`drivers_uname` + `drivers_pass` flow (they typically don't have
+work accounts).
+
+### Schema migration
+
+[migrations/005_phase9_microsoft_sso.sql](migrations/005_phase9_microsoft_sso.sql) — additive only:
+`user.microsoft_oid`, `microsoft_tenant_id`, `microsoft_email`,
+`microsoft_linked_at` (+ index on `microsoft_oid`).
+
+### Flow
+
+1. User clicks **Sign in with Microsoft work account** on
+   [login.php](login.php).
+2. Browser hits `ms-login` route → [ms_sso_start.php](php/operations/ms_sso_start.php) —
+   generates a CSRF state, stores it in the session, redirects to
+   `https://login.microsoftonline.com/{tenant}/oauth2/v2.0/authorize`
+   with scopes `openid profile email offline_access User.Read`.
+3. Microsoft authenticates the user and redirects back to
+   `index.php?route=ms-callback&code=…&state=…`.
+4. [ms_sso_callback.php](php/operations/ms_sso_callback.php):
+   - Verifies state matches the session value (defeats login-CSRF).
+   - Exchanges the code for tokens via the v2.0 token endpoint.
+   - Calls Microsoft Graph `/me` for the canonical profile (id,
+     email, displayName).
+   - Matches the user in this order:
+     1. By stored `microsoft_oid` (the immutable Azure object ID).
+     2. By case-insensitive `user_email` match (and binds the OID
+        for next time).
+     3. Optional auto-provision if the user's tenant matches the
+        configured allow-list (defaults to disabled).
+   - Sets `$_SESSION` and redirects to the role's dashboard
+     (`dashboard` / `dispatch-dashboard` / `hra-dashboard` /
+     `gate-dashboard` / …) using the same role-routing logic as
+     the password flow.
+
+### Setup (one-time, in Azure)
+
+1. Copy [php/config/microsoft_sso.example.php](php/config/microsoft_sso.example.php) to
+   `php/config/microsoft_sso.php` (the real file is **gitignored** —
+   it contains a client secret).
+2. In **Azure Portal → Microsoft Entra ID → App registrations → New
+   registration**:
+   - Redirect URI (Web): `http://localhost/Fleet%20Management/index.php?route=ms-callback` (or your prod HTTPS URL).
+3. Paste **Application (client) ID** → `MS_CLIENT_ID`.
+4. Paste **Directory (tenant) ID** → `MS_TENANT_ID` (or `common` for
+   multi-tenant).
+5. **Certificates & secrets → New client secret** → paste the *value*
+   into `MS_CLIENT_SECRET`.
+6. Microsoft Graph `User.Read` is granted by default — nothing else
+   to configure.
+
+### Auto-provision (optional)
+
+Set `MS_AUTO_PROVISION_TENANT` to your tenant GUID and
+`MS_AUTO_PROVISION_ROLE` (default `Visual`). Users from that tenant
+who don't already exist in `user` will be created on first sign-in
+with the chosen role; an admin can promote them later via the user
+management page.
+
+### Things deferred
+
+- **Driver SSO** — drivers don't use Microsoft work accounts;
+  scope was kept to office staff only.
+- **id_token signature verification** — we cross-check against
+  Microsoft Graph rather than verifying the JWT signature with
+  the published JWKS. Acceptable for this flow because we never
+  trust the id_token alone, but the JWKS path can be added later
+  if needed for stricter compliance.
+- **Logout from Microsoft** — current `logout.php` just clears the
+  PHP session. Adding `?post_logout_redirect_uri=…` to clear the
+  Microsoft cookie too is a one-line follow-up if/when needed.
+
 ## Phase 6 — Billing close + client notify *(planned)*
 
 - New `billing/` module: closes a dispatch by stamping
