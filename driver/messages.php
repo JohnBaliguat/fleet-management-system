@@ -16,18 +16,43 @@ include 'driver/_layout_top.php';
 <script>
 function escapeHtml(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
 
+// Hash the sender id to a colour so different dispatchers stay
+// visually distinguishable across the chat. Saturation kept low so
+// it doesn't fight the rest of the UI.
+function senderColor(seed) {
+  var s = String(seed || ''); var h = 0;
+  for (var i = 0; i < s.length; i++) { h = (h * 31 + s.charCodeAt(i)) >>> 0; }
+  return 'hsl(' + (h % 360) + ', 55%, 40%)';
+}
+
 let lastMsgId = 0;
+let lastSenderKey = '';        // collapses consecutive bubbles from the same sender
 function fetchMessages(replace) {
   $.getJSON('php/fetch/messages.php', { since: lastMsgId }, function (res) {
     if (res.status !== 'success') return;
     const $list = $('#messageList');
-    if (replace) $list.empty();
+    if (replace) { $list.empty(); lastSenderKey = ''; }
     res.rows.forEach(function (m) {
       lastMsgId = Math.max(lastMsgId, parseInt(m.msg_id, 10));
-      const mine = m.from_role === 'driver';
-      const bubble = '<div style="display:flex;justify-content:' + (mine ? 'flex-end' : 'flex-start') + ';margin-bottom:8px;">'
-        + '<div style="max-width:75%;padding:8px 12px;border-radius:12px;font-size:14px;'
-        + (mine ? 'background:#0d6efd;color:#fff;' : 'background:#fff;color:#222;border:1px solid #e5e7eb;') + '">'
+      const mine    = m.from_role === 'driver';
+      const sender  = m.sender_label || (m.from_role === 'driver' ? 'You' : 'Dispatcher');
+      const sendKey = m.from_role + ':' + m.from_id;
+      const showHeader = !mine && sendKey !== lastSenderKey;
+      const color   = senderColor(sendKey);
+      lastSenderKey = sendKey;
+
+      const headerHtml = showHeader
+        ? '<div style="font-size:11px;font-weight:700;color:' + color + ';margin-bottom:2px;">'
+          + '<i class="ti ti-user-circle"></i> ' + escapeHtml(sender) + '</div>'
+        : '';
+
+      const bubble = '<div style="display:flex;flex-direction:column;align-items:' + (mine ? 'flex-end' : 'flex-start') + ';margin-bottom:6px;">'
+        + headerHtml
+        + '<div style="max-width:78%;padding:8px 12px;border-radius:12px;font-size:14px;'
+        + (mine
+            ? 'background:#0d6efd;color:#fff;'
+            : 'background:#fff;color:#222;border:1px solid #e5e7eb;border-left:3px solid ' + color + ';')
+        + '">'
         + escapeHtml(m.body)
         + '<div style="font-size:10px;opacity:.7;margin-top:4px;">' + escapeHtml(m.sent_at) + '</div>'
         + '</div></div>';

@@ -127,10 +127,15 @@
         $area.html('<div class="empty-state">No messages in this thread yet.</div>');
         return;
       }
+      var lastKey = '';
       res.rows.forEach(function (m) {
         lastMsgId = Math.max(lastMsgId, parseInt(m.msg_id, 10));
-        const cls = m.from_role === 'driver' ? 'driver' : 'disp';
-        $area.append('<div class="bubble ' + cls + '">' + escapeHtml(m.body)
+        var cls = m.from_role === 'driver' ? 'driver' : 'disp';
+        var label = m.sender_label || (m.from_role === 'driver' ? 'Driver' : 'Dispatcher');
+        var key = m.from_role + ':' + m.from_id;
+        var header = (key !== lastKey) ? '<div style="font-size:11px;font-weight:600;color:#475569;margin:6px 0 2px;"><i class="ti ti-user-circle"></i> ' + escapeHtml(label) + '</div>' : '';
+        lastKey = key;
+        $area.append(header + '<div class="bubble ' + cls + '">' + escapeHtml(m.body)
           + '<div class="ts">' + escapeHtml(m.sent_at || '') + '</div></div>');
       });
       $area.scrollTop($area.prop('scrollHeight'));

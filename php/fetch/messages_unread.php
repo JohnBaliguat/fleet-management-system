@@ -31,19 +31,30 @@ if ($role === 'Driver') {
     $stmt->close();
 
     if ($includeRecent) {
+        // Resolve the actual dispatcher name so the toast says
+        // "Dispatcher: Nathan Sulatan" instead of just "Dispatcher".
         $stmt = $conn->prepare(
-            "SELECT msg_id, from_role, from_id, body, sent_at, d_id
-             FROM message
-             WHERE msg_id > ?
-               AND from_role <> 'driver'
-               AND ((to_role = 'driver' AND (to_id = ? OR to_id IS NULL)))
-             ORDER BY msg_id ASC LIMIT 20"
+            "SELECT m.msg_id, m.from_role, m.from_id, m.body, m.sent_at, m.d_id,
+                    TRIM(CONCAT(u.user_fname, ' ', u.user_lname)) AS user_name
+             FROM message m
+             LEFT JOIN user u ON u.user_id = m.from_id
+             WHERE m.msg_id > ?
+               AND m.from_role <> 'driver'
+               AND ((m.to_role = 'driver' AND (m.to_id = ? OR m.to_id IS NULL)))
+             ORDER BY m.msg_id ASC LIMIT 20"
         );
         $stmt->bind_param("ii", $sinceId, $id);
         $stmt->execute();
         $res = $stmt->get_result();
         while ($r = $res->fetch_assoc()) {
-            $r['sender_label'] = $r['from_role'] === 'system' ? 'System' : 'Dispatcher';
+            if ($r['from_role'] === 'system') {
+                $r['sender_label'] = 'System';
+            } else {
+                $name = trim($r['user_name'] ?? '');
+                if ($name === '') $name = 'Dispatcher #' . $r['from_id'];
+                $r['sender_label'] = 'Dispatcher: ' . $name;
+            }
+            unset($r['user_name']);
             $recent[] = $r;
         }
         $stmt->close();
