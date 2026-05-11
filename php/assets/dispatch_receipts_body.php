@@ -153,5 +153,6 @@ if ($dId > 0) {
   });
   $(loadReceipts);
   </script>
+  <?php include __DIR__ . '/realtime_alerts.php'; ?>
 </body>
 </html>

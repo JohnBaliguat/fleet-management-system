@@ -140,5 +140,6 @@
   loadPending();
   setInterval(loadPending, 20000);
   </script>
+  <?php include __DIR__ . '/realtime_alerts.php'; ?>
 </body>
 </html>

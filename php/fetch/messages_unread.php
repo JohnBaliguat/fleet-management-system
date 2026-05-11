@@ -6,12 +6,19 @@ include __DIR__ . '/../config/config.php';
 $role = $_SESSION['user_type'] ?? '';
 $id   = (int)($_SESSION['user_id'] ?? 0);
 if (!in_array($role, ['Driver', 'Dispatcher', 'Admin'], true) || $id <= 0) {
-    echo json_encode(['status' => 'success', 'count' => 0]); exit;
+    echo json_encode(['status' => 'success', 'count' => 0, 'recent' => []]); exit;
 }
 
+// When include_recent=1, the realtime-alerts script can read the
+// latest unseen messages and toast them.
+$includeRecent = !empty($_GET['include_recent']);
+$sinceId       = (int)($_GET['since'] ?? 0);
+
 $count = 0;
+$recent = [];
+
 if ($role === 'Driver') {
-    // Messages addressed to me OR to the driver group, not yet read.
+    // Count.
     $stmt = $conn->prepare(
         "SELECT COUNT(*) c FROM message
          WHERE read_at IS NULL
@@ -20,15 +27,59 @@ if ($role === 'Driver') {
     );
     $stmt->bind_param("i", $id);
     $stmt->execute();
-    $r = $stmt->get_result()->fetch_assoc();
+    $count = (int)$stmt->get_result()->fetch_assoc()['c'];
     $stmt->close();
-    $count = (int)($r['c'] ?? 0);
+
+    if ($includeRecent) {
+        $stmt = $conn->prepare(
+            "SELECT msg_id, from_role, from_id, body, sent_at, d_id
+             FROM message
+             WHERE msg_id > ?
+               AND from_role <> 'driver'
+               AND ((to_role = 'driver' AND (to_id = ? OR to_id IS NULL)))
+             ORDER BY msg_id ASC LIMIT 20"
+        );
+        $stmt->bind_param("ii", $sinceId, $id);
+        $stmt->execute();
+        $res = $stmt->get_result();
+        while ($r = $res->fetch_assoc()) {
+            $r['sender_label'] = $r['from_role'] === 'system' ? 'System' : 'Dispatcher';
+            $recent[] = $r;
+        }
+        $stmt->close();
+    }
 } else {
-    // Dispatcher / Admin: unread driver messages.
+    // Dispatcher / Admin.
     $r = $conn->query("SELECT COUNT(*) c FROM message WHERE read_at IS NULL AND from_role = 'driver'");
-    $row = $r->fetch_assoc();
-    $count = (int)($row['c'] ?? 0);
+    $count = (int)$r->fetch_assoc()['c'];
+
+    if ($includeRecent) {
+        // Pull recent driver messages + resolve sender name.
+        $stmt = $conn->prepare(
+            "SELECT m.msg_id, m.from_id, m.body, m.sent_at, m.d_id,
+                    CONCAT(d.driver_lname, ', ', d.driver_fname) AS sender_label
+             FROM message m
+             LEFT JOIN drivers d ON d.driver_id = m.from_id
+             WHERE m.msg_id > ?
+               AND m.from_role = 'driver'
+             ORDER BY m.msg_id ASC LIMIT 20"
+        );
+        $stmt->bind_param("i", $sinceId);
+        $stmt->execute();
+        $res = $stmt->get_result();
+        while ($row = $res->fetch_assoc()) {
+            $row['from_role']    = 'driver';
+            $row['sender_label'] = $row['sender_label'] ?: ('Driver #' . $row['from_id']);
+            $recent[] = $row;
+        }
+        $stmt->close();
+    }
 }
 
-echo json_encode(['status' => 'success', 'count' => $count]);
+echo json_encode([
+    'status' => 'success',
+    'count'  => $count,
+    'role'   => $role,
+    'recent' => $recent,
+]);
 $conn->close();

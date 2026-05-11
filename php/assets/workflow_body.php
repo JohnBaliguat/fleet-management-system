@@ -165,5 +165,6 @@
     if (bn) { $('#bookingSearch').val(bn); load(); }
   })();
   </script>
+  <?php include __DIR__ . '/realtime_alerts.php'; ?>
 </body>
 </html>

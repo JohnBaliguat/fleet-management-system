@@ -908,6 +908,7 @@ if (isset($_SESSION['user_type']) && $_SESSION['user_type'] === "Dispatcher") {
           setupDropdown("dropdown1-btn", "unit-list", "selectedUnits", data, "unit_name");
         });
     </script>
+    <?php include __DIR__ . '/../php/assets/realtime_alerts.php'; ?>
   </body>
 
   </html>

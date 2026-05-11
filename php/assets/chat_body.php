@@ -169,5 +169,6 @@
   setInterval(loadThreads, 15000);
   setInterval(function () { if (activeDriverId) loadMessages(true); }, 5000);
   </script>
+  <?php include __DIR__ . '/realtime_alerts.php'; ?>
 </body>
 </html>

@@ -403,6 +403,7 @@ if (isset($_SESSION['user_type']) && $_SESSION['user_type'] === "Driver") {
   <script>window.PT_VAPID_PUBLIC_KEY = <?php echo json_encode($vapidPublicKey); ?>;</script>
   <?php endif; ?>
   <script src="driver/pwa-register.js"></script>
+  <?php include __DIR__ . '/../php/assets/realtime_alerts.php'; ?>
 
   <script>
     // Modern Tab Switching

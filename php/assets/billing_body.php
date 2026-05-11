@@ -175,5 +175,6 @@
     }, 'json').fail(function(){ Swal.fire({icon:'error',text:'Network error'}); });
   });
   </script>
+  <?php include __DIR__ . '/realtime_alerts.php'; ?>
 </body>
 </html>

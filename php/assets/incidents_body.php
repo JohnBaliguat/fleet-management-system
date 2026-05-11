@@ -170,5 +170,6 @@ while ($r = mysqli_fetch_assoc($res)) { $trailerRows[] = $r; }
   <script src="alert/node_modules/sweetalert2/dist/sweetalert2.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/iconify-icon@1.0.8/dist/iconify-icon.min.js"></script>
   <script src="js/incidents.js"></script>
+  <?php include __DIR__ . '/realtime_alerts.php'; ?>
 </body>
 </html>

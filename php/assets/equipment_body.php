@@ -104,5 +104,6 @@
   load();
   setInterval(load, 30000);
   </script>
+  <?php include __DIR__ . '/realtime_alerts.php'; ?>
 </body>
 </html>
