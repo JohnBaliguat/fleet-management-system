@@ -114,7 +114,11 @@ $result = mysqli_query($conn, $query);
 if ($result && mysqli_num_rows($result) > 0) {
     while ($row = mysqli_fetch_assoc($result)) {
         $sub_array = [];
-        $sub_array[] = '';
+        // Drill-down toggle button. The JS attaches a child row that
+        // lists ALL trips under this dispatch (not just Trip 1 / 2).
+        $sub_array[] = '<button type="button" class="btn btn-sm btn-outline-primary drill-toggle" '
+                     . 'data-d-id="' . (int)$row['d_id'] . '" title="Show / hide trips">'
+                     . '<i class="ti ti-plus"></i></button>';
 
         // Assigned
         $sub_array[] = '

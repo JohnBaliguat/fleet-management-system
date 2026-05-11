@@ -1,42 +1,44 @@
 <?php
-include "../config/config.php";
+include __DIR__ . "/../config/config.php";
 
 if (isset($_POST['d_id'])) {
     $d_id = intval($_POST['d_id']);
 
-    // Fetch dispatch
-    $dispatchSql = "SELECT * FROM dispatch WHERE d_id = ?";
-    $stmt = $conn->prepare($dispatchSql);
+    // Fetch dispatch row.
+    $stmt = $conn->prepare("SELECT * FROM dispatch WHERE d_id = ? LIMIT 1");
     $stmt->bind_param("i", $d_id);
     $stmt->execute();
-    $dispatchResult = $stmt->get_result();
-    $dispatch = $dispatchResult->fetch_assoc();
+    $dispatch = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
 
-    // Fetch trips
-    $tripSql = "SELECT * FROM trips WHERE d_id = ?";
-    $stmt2 = $conn->prepare($tripSql);
-    $stmt2->bind_param("i", $d_id);
-    $stmt2->execute();
-    $tripResult = $stmt2->get_result();
+    // Fetch ALL trips for this dispatch (ordered by trip_id).
+    $stmt = $conn->prepare(
+        "SELECT trip_id, trip_type, trip_container, trip_containerStat, container_activity,
+                trip_haulingSegment, trip_haulingType, trip_from, trip_to, trip_status,
+                segment_costumer, segment_status, foul_trip
+         FROM trips WHERE d_id = ? ORDER BY trip_id ASC"
+    );
+    $stmt->bind_param("i", $d_id);
+    $stmt->execute();
+    $tripResult = $stmt->get_result();
 
+    $trips = [];
     $trip1 = null;
     $trip2 = null;
-
     while ($row = $tripResult->fetch_assoc()) {
-        if ($row['trip_type'] == "Trip 1") {
-            $trip1 = $row;
-        } elseif ($row['trip_type'] == "Trip 2") {
-            $trip2 = $row;
-        }
+        $trips[] = $row;
+        if ($row['trip_type'] === 'Trip 1' && !$trip1) { $trip1 = $row; }
+        if ($row['trip_type'] === 'Trip 2' && !$trip2) { $trip2 = $row; }
     }
+    $stmt->close();
 
     echo json_encode([
-        'success' => true,
+        'success'  => true,
         'dispatch' => $dispatch,
-        'trip1' => $trip1,
-        'trip2' => $trip2
+        'trips'    => $trips,
+        'trip1'    => $trip1,
+        'trip2'    => $trip2,
     ]);
 } else {
     echo json_encode(['success' => false, 'message' => 'Missing d_id']);
 }
-?>
