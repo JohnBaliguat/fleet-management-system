@@ -1094,8 +1094,55 @@ if (isset($_SESSION['user_type']) && $_SESSION['user_type'] === "Admin") {
             driverInput.value = name;
             const selected = allDrivers.find(d => d.name === name);
             driverIdInput.value = selected ? selected.id : "";
+            // Phase 7+ — if the driver already picked a truck via the
+            // pre-departure checklist, auto-fill the Unit field.
+            autofillTruckFromShift(selected ? selected.id : "");
           });
         });
+
+        // Pull driver's open shift_truck and drop it into #assignUnitName1.
+        function autofillTruckFromShift(driverId) {
+          if (!driverId) return;
+          fetch("php/fetch/driver_shift_truck.php?driver_id=" + encodeURIComponent(driverId))
+            .then(r => r.json())
+            .then(res => {
+              if (res.status !== "success") return;
+              var truckBox = document.getElementById("assignUnitName1");
+              if (!truckBox) return;
+              if (res.has_shift && res.shift_truck) {
+                if (!truckBox.value || truckBox.dataset.autofilled === "1") {
+                  truckBox.value = res.shift_truck;
+                  truckBox.dataset.autofilled = "1";
+                  truckBox.classList.add("border-success");
+                  if (typeof Swal !== "undefined") {
+                    Swal.fire({
+                      toast: true, position: "top-end", icon: "info",
+                      title: "Auto-filled truck " + res.shift_truck,
+                      text:  "Picked by the driver at shift-start.",
+                      showConfirmButton: false, timer: 2400, timerProgressBar: true,
+                    });
+                  }
+                }
+              } else if (res.warning) {
+                if (typeof Swal !== "undefined") {
+                  Swal.fire({
+                    toast: true, position: "top-end", icon: "warning",
+                    title: "Heads-up", text: res.warning,
+                    showConfirmButton: false, timer: 3500, timerProgressBar: true,
+                  });
+                }
+              }
+            }).catch(function () { /* silent */ });
+        }
+
+        var truckBoxEl = document.getElementById("assignUnitName1");
+        if (truckBoxEl) {
+          truckBoxEl.addEventListener("input", function () {
+            this.dataset.autofilled = "";
+            this.classList.remove("border-success");
+          });
+        }
+
         // ===== Truck Search =====
         const truckInput = document.getElementById("assignUnitName1");
         const truckList = document.getElementById("truckList");

@@ -430,6 +430,66 @@
             </li>
 
             <li class="sidebar-item">
+              <a class="sidebar-link" href="bookingSegments" aria-expanded="false">
+                <i class="ti ti-route"></i>
+                <span class="hide-menu">Booking Segments</span>
+              </a>
+            </li>
+            <li class="sidebar-item">
+              <a class="sidebar-link" href="incidents" aria-expanded="false">
+                <i class="ti ti-alert-triangle"></i>
+                <span class="hide-menu">Incidents</span>
+              </a>
+            </li>
+            <li class="sidebar-item">
+              <a class="sidebar-link justify-content-between" href="chat" aria-expanded="false">
+                <div class="d-flex align-items-center gap-3">
+                  <i class="ti ti-message-circle"></i>
+                  <span class="hide-menu">Driver Chat</span>
+                </div>
+                <span id="chatUnreadBadgeAdmin" class="badge bg-danger rounded-pill" style="display:none;">0</span>
+              </a>
+            </li>
+            <li class="sidebar-item">
+              <a class="sidebar-link" href="verifications" aria-expanded="false">
+                <i class="ti ti-clipboard-check"></i>
+                <span class="hide-menu">Trip Verification</span>
+              </a>
+            </li>
+            <li class="sidebar-item">
+              <a class="sidebar-link" href="equipment" aria-expanded="false">
+                <i class="ti ti-truck"></i>
+                <span class="hide-menu">Equipment Locations</span>
+              </a>
+            </li>
+            <li class="sidebar-item">
+              <a class="sidebar-link" href="billing" aria-expanded="false">
+                <i class="ti ti-receipt"></i>
+                <span class="hide-menu">Billing</span>
+              </a>
+            </li>
+            <li class="sidebar-item">
+              <a class="sidebar-link" href="workflow" aria-expanded="false">
+                <i class="ti ti-timeline"></i>
+                <span class="hide-menu">Workflow Timeline</span>
+              </a>
+            </li>
+            <script>
+              (function () {
+                if (!window.jQuery) return;
+                function poll() {
+                  $.getJSON('php/fetch/messages_unread.php', function (res) {
+                    if (res.status !== 'success') return;
+                    var n = parseInt(res.count, 10) || 0;
+                    if (n > 0) { $('#chatUnreadBadgeAdmin').text(n).show(); }
+                    else       { $('#chatUnreadBadgeAdmin').hide(); }
+                  });
+                }
+                $(poll);
+                setInterval(poll, 15000);
+              })();
+            </script>
+            <li class="sidebar-item">
               <a class="sidebar-link" href="segment" aria-expanded="false">
                 <i class="ti ti-list-details"></i>
                 <span class="hide-menu">Segment/location</span>

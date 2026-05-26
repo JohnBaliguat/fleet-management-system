@@ -54,6 +54,10 @@ if(isset($_POST['login-btn'])) {
                     header("Location: hra-dashboard");
                 } else if($row['user_type'] === "Visual"){
                     header("Location: visual-dashboard");
+                } else if($row['user_type'] === "Gate-Guard"){
+                    header("Location: gate-dashboard");
+                } else if($row['user_type'] === "Maintenance"){
+                    header("Location: maintenance-dashboard");
                 }
                 exit();
             } else {

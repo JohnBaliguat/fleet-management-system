@@ -133,14 +133,14 @@ if (isset($_SESSION['user_type']) && $_SESSION['user_type'] === "Admin") {
             $driverQuery = "SELECT driver_fname, driver_lname FROM drivers ORDER BY driver_lname ASC";
             $driverResult = mysqli_query($conn, $driverQuery);
 
-            // Get all trucks (units)
-            $truckQuery = "SELECT unit_name FROM units WHERE unit_status = 'good' AND unit_name NOT LIKE 'GS%' ORDER BY unit_name ASC";
+            // Get all trucks (units) — Phase 10: exclude maintenance-blocked.
+            $truckQuery = "SELECT unit_name FROM units WHERE unit_status = 'good' AND maintenance_blocked = 0 AND unit_name NOT LIKE 'GS%' ORDER BY unit_name ASC";
             $truckResult = mysqli_query($conn, $truckQuery);
 
-            $trailerQuery = "SELECT trailer_name FROM trailer WHERE trailer_status = 'good' ORDER BY trailer_name ASC";
+            $trailerQuery = "SELECT trailer_name FROM trailer WHERE trailer_status = 'good' AND maintenance_blocked = 0 ORDER BY trailer_name ASC";
             $trailerResult = mysqli_query($conn, $trailerQuery);
 
-            $gensetQuery = "SELECT unit_name FROM units WHERE unit_status = 'good' AND unit_name LIKE 'GS%' ORDER BY unit_name ASC";
+            $gensetQuery = "SELECT unit_name FROM units WHERE unit_status = 'good' AND maintenance_blocked = 0 AND unit_name LIKE 'GS%' ORDER BY unit_name ASC";
             $gensetResult = mysqli_query($conn, $gensetQuery);
 
             $haulingQuery = "SELECT hauling_segment FROM hauling ORDER BY hauling_id ASC"; 
@@ -173,13 +173,41 @@ if (isset($_SESSION['user_type']) && $_SESSION['user_type'] === "Admin") {
                 <div class="modal-body">
                  <form id="addForm" action="php/crud/add/addbooking.php" method="POST" enctype="multipart/form-data">
                   <div class="row">
-                    <div class="col-md-4"></div>
-                    <div class="col-md-8">
+                    <div class="col-md-6">
+                      <div class="mb-3">
+                        <label for="booking_type" class="form-label">Booking Type <span style="color: red;">*</span></label>
+                        <select class="form-control booking-type-select" id="booking_type" name="booking_type" required>
+                          <option value="Local" selected>Local — between any two locations</option>
+                          <option value="Import">Import — port to warehouse / client</option>
+                          <option value="Export">Export — warehouse to port</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div class="col-md-2"></div>
+                    <div class="col-md-4">
                       <div class="mb-3 d-flex justify-content-between align-items-center">
                         <label for="booking_no" class="form-label mb-0">Booking No</label>
                         <input type="text" class="form-control w-50" id="booking_no" name="booking_no" readonly required style="max-width: 200px;">
                       </div>
                     </div>
+                  </div>
+                  <div class="row port-fields" id="port_fields" style="display:none;">
+                    <div class="col-12"><hr><h6 class="text-muted mb-3">Port details (Import / Export)</h6></div>
+                    <div class="col-md-4"><div class="mb-3"><label for="vessel_name" class="form-label">Vessel Name</label><input type="text" class="form-control" id="vessel_name" name="vessel_name"></div></div>
+                    <div class="col-md-4"><div class="mb-3"><label for="voyage_no" class="form-label">Voyage No</label><input type="text" class="form-control" id="voyage_no" name="voyage_no"></div></div>
+                    <div class="col-md-4"><div class="mb-3"><label for="container_no_port" class="form-label">Container No (Port)</label><input type="text" class="form-control" id="container_no_port" name="container_no_port"></div></div>
+                    <div class="col-md-4"><div class="mb-3"><label for="bill_of_lading" class="form-label">Bill of Lading</label><input type="text" class="form-control" id="bill_of_lading" name="bill_of_lading"></div></div>
+                    <div class="col-md-4"><div class="mb-3"><label for="port_location" class="form-label">Port Location</label><input type="text" class="form-control" id="port_location" name="port_location"></div></div>
+                    <div class="col-md-4 export-only" style="display:none;">
+                      <div class="mb-3">
+                        <label class="form-label d-block">Customs Cleared</label>
+                        <div class="form-check form-switch">
+                          <input class="form-check-input" type="checkbox" id="customs_cleared" name="customs_cleared" value="1">
+                          <label class="form-check-label" for="customs_cleared">Cleared (required before gate exit)</label>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="col-12"><hr></div>
                   </div>
                     <div class="row">
                       <div class="col-md-6">
@@ -321,13 +349,41 @@ if (isset($_SESSION['user_type']) && $_SESSION['user_type'] === "Admin") {
                  <form id="editForm" action="php/operations/editbooking.php" method="POST" enctype="multipart/form-data">
                   <input type="hidden" id="booking_id1" name="booking_id">
                   <div class="row">
-                    <div class="col-md-4"></div>
-                    <div class="col-md-8">
+                    <div class="col-md-6">
+                      <div class="mb-3">
+                        <label for="booking_type1" class="form-label">Booking Type <span style="color: red;">*</span></label>
+                        <select class="form-control booking-type-select" id="booking_type1" name="booking_type1" required>
+                          <option value="Local">Local — between any two locations</option>
+                          <option value="Import">Import — port to warehouse / client</option>
+                          <option value="Export">Export — warehouse to port</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div class="col-md-2"></div>
+                    <div class="col-md-4">
                       <div class="mb-3 d-flex justify-content-between align-items-center">
                         <label for="booking_no1" class="form-label mb-0">Booking No</label>
                         <input type="text" class="form-control w-50" id="booking_no1" name="booking_no1" readonly required style="max-width: 200px;">
                       </div>
                     </div>
+                  </div>
+                  <div class="row port-fields" id="port_fields_edit" style="display:none;">
+                    <div class="col-12"><hr><h6 class="text-muted mb-3">Port details (Import / Export)</h6></div>
+                    <div class="col-md-4"><div class="mb-3"><label for="vessel_name1" class="form-label">Vessel Name</label><input type="text" class="form-control" id="vessel_name1" name="vessel_name1"></div></div>
+                    <div class="col-md-4"><div class="mb-3"><label for="voyage_no1" class="form-label">Voyage No</label><input type="text" class="form-control" id="voyage_no1" name="voyage_no1"></div></div>
+                    <div class="col-md-4"><div class="mb-3"><label for="container_no_port1" class="form-label">Container No (Port)</label><input type="text" class="form-control" id="container_no_port1" name="container_no_port1"></div></div>
+                    <div class="col-md-4"><div class="mb-3"><label for="bill_of_lading1" class="form-label">Bill of Lading</label><input type="text" class="form-control" id="bill_of_lading1" name="bill_of_lading1"></div></div>
+                    <div class="col-md-4"><div class="mb-3"><label for="port_location1" class="form-label">Port Location</label><input type="text" class="form-control" id="port_location1" name="port_location1"></div></div>
+                    <div class="col-md-4 export-only" style="display:none;">
+                      <div class="mb-3">
+                        <label class="form-label d-block">Customs Cleared</label>
+                        <div class="form-check form-switch">
+                          <input class="form-check-input" type="checkbox" id="customs_cleared1" name="customs_cleared1" value="1">
+                          <label class="form-check-label" for="customs_cleared1">Cleared (required before gate exit)</label>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="col-12"><hr></div>
                   </div>
                     <div class="row">
                       <div class="col-md-6">
@@ -476,6 +532,24 @@ if (isset($_SESSION['user_type']) && $_SESSION['user_type'] === "Admin") {
   <script src="js/addbooking.js"></script>
   <!-- solar icons -->
   <script src="https://cdn.jsdelivr.net/npm/iconify-icon@1.0.8/dist/iconify-icon.min.js"></script>
+  <script>
+    // Toggle port-fields panel based on booking_type select.
+    $(document).on('change', '.booking-type-select', function() {
+      var val = $(this).val();
+      var $panel = $(this).closest('form').find('.port-fields');
+      var $exportOnly = $panel.find('.export-only');
+      if (val === 'Import' || val === 'Export') {
+        $panel.show();
+        $exportOnly.toggle(val === 'Export');
+      } else {
+        $panel.hide();
+        $exportOnly.hide();
+      }
+    });
+    $(function() {
+      $('.booking-type-select').each(function() { $(this).trigger('change'); });
+    });
+  </script>
 </body>
 
 </html>

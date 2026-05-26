@@ -245,33 +245,58 @@ const table = new DataTable('#booking-table', {
         });
     });
 
-    function editBooking(booking_id, booking_no, booking_date, booking_dateRequired, costumer, container_seal, container, booking_activity, container_status, hauling_segment, trip_from, trip_to, quantity, quantity_use) {
-        $('#booking_id1').val(booking_id);
-        $('#booking_no1').val(booking_no);
-        $('#booking_date1').val(booking_date);
-        $('#booking_required1').val(booking_dateRequired);
-        $('#costumer1').val(costumer);
-        $('#container_seal1').val(container_seal);
-        $('#container1').val(container);
-        $('#booking_activity1').val(booking_activity);
-        $('#container_status1').val(container_status);
-        $('#hauling_segment1').val(hauling_segment);
-        $('#trip_from1').val(trip_from);
-        $('#trip_to1').val(trip_to);
-        $('#quantity1').val(quantity);
+    function editBooking(booking_id) {
+        $.getJSON('php/fetch/get_booking.php', { booking_id: booking_id }, function (res) {
+            if (res.status !== 'success') {
+                Swal.fire({ icon: 'error', text: res.message || 'Failed to load booking' });
+                return;
+            }
+            var b = res.booking;
+            $('#booking_id1').val(b.booking_id);
+            $('#booking_no1').val(b.booking_no);
+            $('#booking_type1').val(b.booking_type || 'Local');
+            $('#booking_date1').val(b.booking_date);
+            $('#booking_required1').val(b.booking_dateRequired);
+            $('#costumer1').val(b.costumer);
+            $('#container_seal1').val(b.container_seal);
+            $('#container1').val(b.container);
+            $('#booking_activity1').val(b.booking_activity);
+            $('#container_status1').val(b.container_status);
+            $('#hauling_segment1').val(b.hauling_segment);
+            $('#trip_from1').val(b.trip_from);
+            $('#trip_to1').val(b.trip_to);
+            $('#quantity1').val(b.quantity);
 
-        // If quantity_use is not 0, make all fields readonly except quantity1
-        if (quantity_use != 0) {
-            $('#booking_no1, #booking_date1, #booking_required1, #costumer1, #container_seal1, #container1, #booking_activity1, #container_status1, #hauling_segment1, #hauling_type1, #trip_from1, #trip_to1')
-                .prop('readonly', true);
-            $('#quantity1').prop('readonly', false);
-        } else {
-            // Allow editing if quantity_use is still 0
-            $('#booking_no1, #booking_date1, #booking_required1, #costumer1, #container_seal1, #container1, #booking_activity1, #container_status1, #hauling_segment1, #hauling_type1, #trip_from1, #trip_to1, #quantity1')
-                .prop('readonly', false);
-        }
+            // Phase 2 — port fields.
+            $('#vessel_name1').val(b.vessel_name || '');
+            $('#voyage_no1').val(b.voyage_no || '');
+            $('#container_no_port1').val(b.container_no_port || '');
+            $('#bill_of_lading1').val(b.bill_of_lading || '');
+            $('#port_location1').val(b.port_location || '');
+            $('#customs_cleared1').prop('checked', b.customs_cleared == 1);
 
-        $('#editModal').modal('show');
+            // Trigger the booking-type toggle to show/hide port panel.
+            $('#booking_type1').trigger('change');
+
+            // If any quantity has been used, lock everything except quantity.
+            var quantity_use = parseInt(b.quantity_use, 10) || 0;
+            var lockable = '#booking_type1, #booking_no1, #booking_date1, #booking_required1, #costumer1, ' +
+                '#container_seal1, #container1, #booking_activity1, #container_status1, #hauling_segment1, ' +
+                '#trip_from1, #trip_to1, #vessel_name1, #voyage_no1, #container_no_port1, ' +
+                '#bill_of_lading1, #port_location1';
+            if (quantity_use !== 0) {
+                $(lockable).prop('readonly', true);
+                $('#booking_type1').prop('disabled', true);
+                $('#quantity1').prop('readonly', false);
+            } else {
+                $(lockable + ', #quantity1').prop('readonly', false);
+                $('#booking_type1').prop('disabled', false);
+            }
+
+            $('#editModal').modal('show');
+        }).fail(function () {
+            Swal.fire({ icon: 'error', text: 'Failed to load booking' });
+        });
     }
         function deleteBooking(booking_id) {
             var booking_Id = booking_id;

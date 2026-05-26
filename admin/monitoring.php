@@ -221,56 +221,16 @@ if (isset($_SESSION['user_type']) && $_SESSION['user_type'] === "Admin") {
                   <datalist id="datalistOptions_genset"></datalist>
                 </div>
 
-                <div class="col-md-6 mb-2">
-                  <label class="form-label">Trip 1 - Container No</label>
-                  <input type="text" class="form-control" id="edit_container_no" name="container_no1">
-                </div>
-
-                <div class="col-md-6 mb-2">
-                  <label class="form-label">Trip 1 - Container Status E/L</label>
-                  <input type="text" class="form-control" id="edit_container_status" name="container_status1" list="containerStat">
-                </div>
-
-                <div class="col-md-12 mb-2">
-                  <label class="form-label">Hauling Segment Trip 1</label>
-                  <input class="form-control" list="datalistOptions_hauling_segment" name="hauling_segment1" id="edit_hauling_segment" required>
-                </div>
-
-                <div class="col-md-6 mb-2">
-                  <label class="form-label">1st Trip - Destination From</label>
-                  <input class="form-control" list="datalistOptions_destination_from" name="destination_from1" id="edit_destination_from" required>
-                </div>
-
-                <div class="col-md-6 mb-2">
-                  <label class="form-label">To</label>
-                  <input class="form-control" list="datalistOptions_destination_to" name="destination_to1" id="edit_destination_to" required>
-                </div>
-
-                <div class="col-md-6 mb-2">
-                  <label class="form-label">Trip 2 - Container No</label>
-                  <input type="text" class="form-control" id="edit_container_no2" name="container_no2">
-                </div>
-
-                <div class="col-md-6 mb-2">
-                  <label class="form-label">Trip 2 - Container Status E/L</label>
-                  <input type="text" class="form-control" id="edit_container_status2" name="container_status2" list="containerStat">
-                </div>
-
-                <div class="col-md-12 mb-2">
-                  <label class="form-label">Hauling Segment Trip 2(Optional)</label>
-                  <input class="form-control" list="datalistOptions_hauling_segment" name="hauling_segment2" id="edit_hauling_segment2">
-                </div>
-
-                <div class="col-md-6 mb-2">
-                  <label class="form-label">2nd Trip - Destination From</label>
-                  <input class="form-control" list="datalistOptions_destination_from1" name="destination_from12" id="edit_destination_from1" required>
-                </div>
-
-                <div class="col-md-6 mb-2">
-                  <label class="form-label">To</label>
-                  <input class="form-control" list="datalistOptions_destination_to1" name="destination_to12" id="edit_destination_to1" required>
-                </div>
+                <input type="text" name="shippingSN1" id="shippingSN1" hidden>
               </div>
+
+              <hr class="my-3">
+              <div class="d-flex align-items-center mb-2">
+                <h6 class="mb-0">Trips</h6>
+                <small class="ms-2 text-muted">All trips under this dispatch &mdash; Phase 2 segments included.</small>
+              </div>
+              <!-- Dynamic trip fieldsets rendered by editDispatch() via JS. -->
+              <div id="dynamicTripsBox"></div>
             </div>
 
             <div class="modal-footer">

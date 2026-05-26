@@ -89,23 +89,8 @@ while ($row = mysqli_fetch_assoc($result)) {
     $actionBtns = '<div class="d-flex align-items-center list-user-action">';
 
     if ($row['quantity_use'] < $row['quantity']) {
-        $actionBtns .= '<a class="btn btn-primary btn-sm" data-toggle="tooltip" title="Edit" href="#" 
-            onclick="editBooking(' .
-                "'" . $row['booking_id'] . "', " .
-                "'" . $row['booking_no'] . "', " .
-                "'" . $row['booking_date'] . "', " .
-                "'" . $row['booking_dateRequired'] . "', " .
-                "'" . $row['costumer'] . "', " .
-                "'" . $row['container_seal'] . "', " .
-                "'" . $row['container'] . "', " .
-                "'" . $row['booking_activity'] . "', " .
-                "'" . $row['container_status'] . "', " .
-                "'" . $row['hauling_segment'] . "', " .
-                "'" . $row['trip_from'] . "', " .
-                "'" . $row['trip_to'] . "', " .
-                "'" . $row['quantity'] . "', " .
-                "'" . $row['quantity_use'] . "'" .
-            ')"><i class="ti ti-edit"></i></a>';
+        $actionBtns .= '<a class="btn btn-primary btn-sm" data-toggle="tooltip" title="Edit" href="#" '
+            . 'onclick="editBooking(' . (int)$row['booking_id'] . '); return false;"><i class="ti ti-edit"></i></a>';
     }
 
     if ($row['quantity_use'] == 0) {

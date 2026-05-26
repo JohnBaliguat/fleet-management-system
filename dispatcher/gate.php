@@ -88,7 +88,7 @@ if (isset($_SESSION['user_type']) && $_SESSION['user_type'] === "Dispatcher") {
                         </tr>
                       </thead>
                       <tbody>
-                        
+
                       </tbody>
                     </table>
                   </div>
@@ -96,6 +96,32 @@ if (isset($_SESSION['user_type']) && $_SESSION['user_type'] === "Dispatcher") {
               </div>
             </div>
           </div>
+
+          <!-- Row 2 — Phase 3 Gate Queue panel -->
+          <div class="row mt-3">
+            <div class="col-12">
+              <div class="card"><div class="card-body">
+                <div class="d-md-flex align-items-center mb-2">
+                  <div>
+                    <h4 class="card-title mb-0">Gate Queue</h4>
+                    <p class="card-subtitle">Vehicles waiting at the gate. Approve to authorise entry; deny to refuse.</p>
+                  </div>
+                  <div class="ms-auto">
+                    <button class="btn btn-sm btn-outline-secondary" id="refreshQueueBtn"><i class="ti ti-refresh"></i> Refresh</button>
+                  </div>
+                </div>
+                <div class="table-responsive">
+                  <table class="table table-bordered align-middle mb-0">
+                    <thead class="table-light"><tr>
+                      <th>Requested</th><th>Truck</th><th>Driver</th><th>Booking</th><th>Notes</th><th class="text-end">Action</th>
+                    </tr></thead>
+                    <tbody id="gateQueueBody"><tr><td colspan="6" class="text-center text-muted">Loading…</td></tr></tbody>
+                  </table>
+                </div>
+              </div></div>
+            </div>
+          </div>
+
           <div class="py-6 px-6 text-center">
             <p class="mb-0 fs-4">Design and Developed by JA Baliguat | 2025</p>
           </div>
@@ -114,6 +140,43 @@ if (isset($_SESSION['user_type']) && $_SESSION['user_type'] === "Dispatcher") {
   <!-- solar icons -->
   <script src="https://cdn.jsdelivr.net/npm/iconify-icon@1.0.8/dist/iconify-icon.min.js"></script>
   <script src="js/gate.js"></script>
+  <script>
+  // Phase 3 — gate queue approval panel (dispatcher view).
+  function escapeHtmlQ(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+  function renderGateQueue(){
+    $.getJSON('php/fetch/gate_queue.php', { status: 'pending' }, function(res){
+      if (res.status !== 'success') return;
+      if (!res.rows.length) {
+        $('#gateQueueBody').html('<tr><td colspan="6" class="text-center text-muted">No vehicles waiting.</td></tr>');
+        return;
+      }
+      var html = res.rows.map(function(r){
+        return '<tr data-gq-id="' + r.gq_id + '">'
+          + '<td>' + escapeHtmlQ(r.requested_at) + '</td>'
+          + '<td>' + escapeHtmlQ(r.truck_plate) + '</td>'
+          + '<td>' + escapeHtmlQ(r.d_driverName || '-') + '</td>'
+          + '<td>' + escapeHtmlQ(r.booking_no || '-') + '</td>'
+          + '<td>' + escapeHtmlQ(r.notes || '') + '</td>'
+          + '<td class="text-end">'
+          +   '<button class="btn btn-sm btn-success me-1 q-approve">Approve</button>'
+          +   '<button class="btn btn-sm btn-danger q-deny">Deny</button>'
+          + '</td></tr>';
+      }).join('');
+      $('#gateQueueBody').html(html);
+    });
+  }
+  function decideQueue(gqId, decision){
+    $.post('php/operations/gate_queue_decide.php', { gq_id: gqId, decision: decision }, function(res){
+      Swal.fire({ icon: res.status === 'success' ? 'success' : 'error', text: res.message, timer: 1200, showConfirmButton: false });
+      renderGateQueue();
+    }, 'json');
+  }
+  $('#gateQueueBody').on('click', '.q-approve', function(){ decideQueue($(this).closest('tr').data('gq-id'), 'approved'); });
+  $('#gateQueueBody').on('click', '.q-deny',    function(){ decideQueue($(this).closest('tr').data('gq-id'), 'denied'); });
+  $('#refreshQueueBtn').on('click', renderGateQueue);
+  $(renderGateQueue);
+  setInterval(renderGateQueue, 10000);
+  </script>
 </body>
 
 

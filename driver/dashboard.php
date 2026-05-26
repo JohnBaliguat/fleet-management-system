@@ -9,7 +9,13 @@ if (isset($_SESSION['user_type']) && $_SESSION['user_type'] === "Driver") {
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
   <title>Dashboard - Driver</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#0d6efd">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="PT Driver">
   <link rel="shortcut icon" type="image/png" href="assets/images/logos/LogoFleet.png" />
+  <link rel="apple-touch-icon" href="assets/images/logos/LogoFleet.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -38,8 +44,41 @@ if (isset($_SESSION['user_type']) && $_SESSION['user_type'] === "Driver") {
         <?php include 'navbar.php'; ?>
       <div class="container-fluid">
         
+        <?php
+          // Phase 7 — Shift status banner.
+          include "php/config/config.php";
+          $driverId = (int)$_SESSION['user_id'];
+          $shift = null;
+          $stmtS = $conn->prepare("SELECT ds_id, truck_code, started_at FROM driver_shift WHERE driver_id = ? AND ended_at IS NULL ORDER BY ds_id DESC LIMIT 1");
+          $stmtS->bind_param("i", $driverId);
+          $stmtS->execute();
+          $shift = $stmtS->get_result()->fetch_assoc();
+          $stmtS->close();
+        ?>
+        <div class="card mt-5 <?= $shift ? 'border-success' : 'border-warning' ?>" style="border-width:2px;">
+          <div class="card-body d-flex align-items-center gap-3" style="padding:14px;">
+            <i class="ti <?= $shift ? 'ti-truck-delivery' : 'ti-alert-triangle' ?> fs-3 <?= $shift ? 'text-success' : 'text-warning' ?>"></i>
+            <div class="flex-fill">
+              <?php if ($shift): ?>
+                <div class="fw-bold">Shift active &mdash; truck <?= htmlspecialchars($shift['truck_code']) ?></div>
+                <div class="text-muted small">Started <?= htmlspecialchars($shift['started_at']) ?></div>
+              <?php else: ?>
+                <div class="fw-bold">No active shift</div>
+                <div class="text-muted small">Run the pre-departure checklist to start.</div>
+              <?php endif; ?>
+            </div>
+            <?php if ($shift): ?>
+              <button class="btn-modern btn-outline-modern" id="endShiftBtn" style="width:auto;padding:8px 14px;border-color:#dc3545;color:#dc3545;">
+                <i class="ti ti-power"></i> End Shift
+              </button>
+            <?php else: ?>
+              <a href="driver-checklist" class="btn-modern btn-primary-modern" style="width:auto;padding:8px 14px;">Start Shift</a>
+            <?php endif; ?>
+          </div>
+        </div>
+
         <!-- Stats Overview -->
-        <div class="stats-grid mb-4 mt-5">
+        <div class="stats-grid mb-4 mt-3">
           <div class="stat-card">
             <div class="stat-icon">
               <i class="ti ti-clock"></i>
@@ -86,11 +125,11 @@ if (isset($_SESSION['user_type']) && $_SESSION['user_type'] === "Driver") {
 
               $sql = "SELECT d.d_id, d.booking_no, d.d_datetime, d.d_dispatcher, d.d_dispatchHub,
                       d.d_driverName, d.driver_id, d.d_truck, d.d_trailer, d.d_genset,
-                      d.d_tripReceipt, d.d_ecs, d.costumer,
-                      t.trip_id, t.trip_type, t.trip_container, t.container_activity, 
-                      t.trip_containerStat, t.trip_haulingSegment, t.trip_haulingType, 
+                      d.d_tripReceipt, d.d_ecs, d.costumer, d.workflow_stage,
+                      t.trip_id, t.trip_type, t.trip_container, t.container_activity,
+                      t.trip_containerStat, t.trip_haulingSegment, t.trip_haulingType,
                       t.trip_from, t.trip_to, t.km_run, t.trip_departureDateTime, t.trip_arrivalDateTime,
-                      t.trip_pharrivalDateTime, t.deliver_location, t.deliver_dateTime, 
+                      t.trip_pharrivalDateTime, t.deliver_location, t.deliver_dateTime,
                       t.withdraw_location, t.withdraw_dateTime, t.required_date, t.trip_status
                       FROM dispatch d
                       LEFT JOIN trips t ON d.d_id = t.d_id
@@ -114,23 +153,115 @@ if (isset($_SESSION['user_type']) && $_SESSION['user_type'] === "Driver") {
                   $statusClass = $status == "Active" ? "active" : ($status == "Done" ? "completed" : "pending");
                   $statusText = $status == "Active" ? "Active" : ($status == "Done" ? "Completed" : $status);
                 ?>
-                <div class="booking-card" data-booking-id="<?= $d_id ?>" data-status="<?= strtolower($statusText) ?>">
+                <?php
+                  $wf = $dispatch['workflow_stage'] ?? 'dispatcher_assigned';
+                  $isPending  = in_array($wf, ['dispatcher_assigned', 'reassigned'], true);
+                  $isAccepted = in_array($wf, ['driver_accepted', 'gate_cleared', 'en_route'], true);
+                  $isAwaiting = $wf === 'pending_verification';
+                  $isCompleted = in_array($wf, ['pod_captured', 'billing_closed', 'client_notified'], true);
+                  $wfLabel = [
+                    'dispatcher_assigned'  => 'Awaiting your accept',
+                    'reassigned'           => 'Re-assigned to you',
+                    'driver_accepted'      => 'Accepted',
+                    'gate_cleared'         => 'Gate cleared',
+                    'en_route'             => 'En route',
+                    'delivered'            => 'Delivered',
+                    'pending_verification' => 'Pending Verification',
+                    'pod_captured'         => 'Completed',
+                    'billing_closed'       => 'Completed (Billed)',
+                    'client_notified'      => 'Completed (Notified)',
+                    'driver_declined'      => 'Declined',
+                    'reassigned_from'      => 'Superseded',
+                  ][$wf] ?? $wf;
+                ?>
+                <div class="booking-card" data-booking-id="<?= $d_id ?>" data-status="<?= strtolower($statusText) ?>" data-wf="<?= htmlspecialchars($wf) ?>">
                   <div class="booking-header">
                     <div>
                       <h6><?= $dispatch['booking_no'] ?></h6>
                       <span class="customer"><?= htmlspecialchars($dispatch['costumer']) ?></span>
                       <div class="meta">
                         <i class="ti ti-calendar"></i> <?= date("M d, Y", strtotime($dispatch['required_date'])) ?>
+                        <span class="badge bg-light text-dark ms-2"><?= htmlspecialchars($wfLabel) ?></span>
                       </div>
                     </div>
                     <span class="status-badge <?= $statusClass ?>"><?= $statusText ?></span>
                   </div>
-                  
+
                   <div class="booking-details" id="details-<?= $d_id ?>">
                     <div class="mb-3">
                       <small class="text-muted d-block mb-1">Assigned Vehicle</small>
                       <strong><?= $dispatch['d_truck'] ?></strong> • <?= $dispatch['d_trailer'] ?>
                     </div>
+
+                    <?php if ($isPending): ?>
+                      <div class="d-flex gap-2 mb-3 phase5-actions">
+                        <button class="btn-modern btn-success-modern flex-fill phase5-accept" data-id="<?= $d_id ?>"><i class="ti ti-check"></i> Accept</button>
+                        <button class="btn-modern btn-outline-modern flex-fill phase5-decline" data-id="<?= $d_id ?>"><i class="ti ti-x"></i> Decline</button>
+                      </div>
+                    <?php elseif ($isAccepted): ?>
+                      <?php
+                        // Determine the highest-progressed driver tap for this dispatch.
+                        // Drives the visual hierarchy: completed steps green-disabled, next
+                        // step primary blue, future steps faded outline.
+                        $statusOrder  = ['picked_up', 'on_the_way', 'arrived', 'delivered'];
+                        $statusLabels = ['picked_up' => 'Picked up', 'on_the_way' => 'On the way', 'arrived' => 'Arrived at destination', 'delivered' => 'Mark Delivered'];
+                        $statusIcons  = ['picked_up' => 'ti-package', 'on_the_way' => 'ti-arrow-right', 'arrived' => 'ti-map-pin', 'delivered' => 'ti-check'];
+                        $stmtX = $conn->prepare(
+                            "SELECT stage FROM workflow_event
+                             WHERE d_id = ? AND actor_role = 'driver'
+                               AND stage IN ('picked_up','on_the_way','arrived','delivered')
+                             ORDER BY we_id DESC LIMIT 1"
+                        );
+                        $stmtX->bind_param("i", $d_id);
+                        $stmtX->execute();
+                        $latestRow   = $stmtX->get_result()->fetch_assoc();
+                        $stmtX->close();
+                        $latestStage = $latestRow['stage'] ?? '';
+                        $latestIdx   = $latestStage !== '' ? array_search($latestStage, $statusOrder, true) : -1;
+                      ?>
+                      <small class="text-muted d-block mb-1"><i class="ti ti-route"></i> Trip status — tap each as it happens</small>
+                      <div class="d-flex flex-column gap-1 mb-3 phase5-status-list">
+                        <?php foreach ($statusOrder as $i => $st):
+                          $done   = $i <= $latestIdx;
+                          $isNext = $i === $latestIdx + 1;
+                          $cls = $done ? 'btn-success-modern' : ($isNext ? 'btn-primary-modern' : 'btn-outline-modern');
+                          $opacity = $done ? '0.7' : ($isNext ? '1' : '0.55');
+                        ?>
+                          <button class="btn-modern <?= $cls ?> phase5-status text-start"
+                                  data-id="<?= $d_id ?>"
+                                  data-st="<?= $st ?>"
+                                  <?= $done ? 'disabled' : '' ?>
+                                  style="display:flex;align-items:center;gap:10px;padding:10px 14px;opacity:<?= $opacity ?>;justify-content:flex-start;">
+                            <span style="display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.4);font-weight:700;font-size:12px;"><?= $i + 1 ?></span>
+                            <i class="ti <?= $statusIcons[$st] ?>"></i>
+                            <span class="flex-fill"><?= $statusLabels[$st] ?></span>
+                            <?php if ($done): ?><i class="ti ti-circle-check"></i><?php endif; ?>
+                          </button>
+                        <?php endforeach; ?>
+                      </div>
+
+                      <small class="text-muted d-block mb-1"><i class="ti ti-files"></i> Documents &amp; alt-flows</small>
+                      <div class="d-flex flex-wrap gap-1 mb-3">
+                        <a href="driver-receipts?d_id=<?= $d_id ?>" class="btn-modern btn-outline-modern" style="flex:1;min-width:48%;font-size:12px;padding:6px;"><i class="ti ti-file"></i> Receipts</a>
+                        <?php
+                          $podActive = ($latestStage === 'delivered');
+                          $podCls    = $podActive ? 'btn-primary-modern' : 'btn-outline-modern';
+                          $podStyle  = $podActive ? '' : 'opacity:0.55;';
+                          $podTitle  = $podActive ? 'Capture proof of delivery' : 'Becomes the next step after you tap Delivered';
+                        ?>
+                        <a href="driver-pod?d_id=<?= $d_id ?>" class="btn-modern <?= $podCls ?>" title="<?= htmlspecialchars($podTitle) ?>" style="flex:1;min-width:48%;font-size:12px;padding:6px;<?= $podStyle ?>"><i class="ti ti-camera"></i> POD<?php if ($podActive): ?> &mdash; next<?php endif; ?></a>
+                        <a href="driver-gateless?d_id=<?= $d_id ?>" class="btn-modern btn-outline-modern" style="flex:1;min-width:48%;font-size:12px;padding:6px;opacity:0.7;" title="No gate at destination? Capture GPS + photos here instead of POD."><i class="ti ti-map-pin"></i> Gateless</a>
+                        <a href="driver-jackup?d_id=<?= $d_id ?>" class="btn-modern btn-outline-modern" style="flex:1;min-width:48%;font-size:12px;padding:6px;opacity:0.7;" title="Detach trailer at site (billing keeps running)"><i class="ti ti-trailer"></i> Jack-up</a>
+                      </div>
+                    <?php elseif ($isAwaiting): ?>
+                      <div class="alert alert-info mb-3" style="padding:10px 14px;">
+                        <i class="ti ti-clock"></i> Awaiting dispatcher verification of your POD. You'll get a push notification once it's confirmed.
+                      </div>
+                    <?php elseif ($isCompleted): ?>
+                      <div class="alert alert-success mb-3" style="padding:10px 14px;">
+                        <i class="ti ti-circle-check"></i> Trip completed. Nothing more to do.
+                      </div>
+                    <?php endif; ?>
 
                     <div class="trip-list">
                       <?php foreach ($trips as $trip): ?>
@@ -158,13 +289,10 @@ if (isset($_SESSION['user_type']) && $_SESSION['user_type'] === "Driver") {
                         <i class="ti ti-map"></i> Map
                       </button>
                       
-                      <?php if ($status == "Active"): ?>
-                      <button class="btn-modern btn-success-modern flex-fill view-time"
-                              data-id="<?= end($trips)['trip_id'] ?>"
-                              data-container="<?= htmlspecialchars(end($trips)['trip_container'] ?? '') ?>">
-                        <i class="ti ti-check"></i> Complete
-                      </button>
-                      <?php endif; ?>
+                      <?php /* Legacy Complete button removed — Phase 5+ replaces it with the
+                              Accept → status pills → POD → dispatcher verification flow. The
+                              old `view-time` modal at the bottom of this page is still wired so
+                              admin/dispatcher tools that deep-link to it keep working. */ ?>
                     </div>
                   </div>
                 </div>
@@ -186,14 +314,19 @@ if (isset($_SESSION['user_type']) && $_SESSION['user_type'] === "Driver") {
         <i class="ti ti-truck"></i>
         <span>Unit</span>
       </a>
+      <a href="driver-messages" class="nav-item" id="navChat">
+        <i class="ti ti-message-circle"></i>
+        <span>Chat</span>
+        <span id="unreadDot" class="badge bg-danger" style="position:absolute;top:6px;right:18px;display:none;border-radius:50%;width:8px;height:8px;padding:0;"></span>
+      </a>
       <a href="driver-tripReport" class="nav-item">
         <i class="ti ti-clipboard-list"></i>
         <span>Reports</span>
       </a>
-      <button onclick="sosAlert()" class="nav-item sos-btn">
+      <a href="driver-breakdown" class="nav-item sos-btn">
         <i class="ti ti-alert-triangle"></i>
         <span>SOS</span>
-      </button>
+      </a>
     </div>
 
   </div>
@@ -259,7 +392,18 @@ if (isset($_SESSION['user_type']) && $_SESSION['user_type'] === "Driver") {
   <script src="assets/libs/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
   <script src="alert/node_modules/sweetalert2/dist/sweetalert2.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/iconify-icon@1.0.8/dist/iconify-icon.min.js"></script>
-  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyD4FCZJxNlXSlbV4pX18229Vh8UofzpAEk&libraries=places"></script>
+  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDi9dpeJZM1GkdSfovy2ufBWQZFabMrSRA&libraries=places"></script>
+  <?php /* Phase 5 — PWA registration. Optional VAPID public key surfaces push if configured. */ ?>
+  <?php
+    $vapidPublicKey = '';
+    $vapidFile = __DIR__ . '/../php/config/vapid.php';
+    if (file_exists($vapidFile)) { @include $vapidFile; if (defined('VAPID_PUBLIC_KEY')) $vapidPublicKey = VAPID_PUBLIC_KEY; }
+  ?>
+  <?php if ($vapidPublicKey !== ''): ?>
+  <script>window.PT_VAPID_PUBLIC_KEY = <?php echo json_encode($vapidPublicKey); ?>;</script>
+  <?php endif; ?>
+  <script src="driver/pwa-register.js"></script>
+  <?php include __DIR__ . '/../php/assets/realtime_alerts.php'; ?>
 
   <script>
     // Modern Tab Switching
@@ -282,10 +426,87 @@ if (isset($_SESSION['user_type']) && $_SESSION['user_type'] === "Driver") {
     // Booking Card Toggle
     $('.booking-card').on('click', function(e) {
       if ($(e.target).closest('button').length) return;
-      
+      if ($(e.target).closest('a').length) return;
+
       const id = $(this).data('booking-id');
       const details = $(`#details-${id}`);
       details.toggleClass('show');
+    });
+
+    // Phase 5 — Accept / Decline a pending dispatch.
+    $(document).on('click', '.phase5-accept', function (e) {
+      e.stopPropagation();
+      const id = $(this).data('id');
+      $.post('php/operations/driver_accept_job.php', { d_id: id }, function (res) {
+        Swal.fire({ icon: res.status === 'success' ? 'success' : (res.status === 'queued' ? 'info' : 'error'),
+                    text: res.message, timer: 1500, showConfirmButton: false });
+        if (res.status === 'success' || res.status === 'queued') setTimeout(() => location.reload(), 1600);
+      }, 'json');
+    });
+    $(document).on('click', '.phase5-decline', function (e) {
+      e.stopPropagation();
+      const id = $(this).data('id');
+      Swal.fire({ title: 'Decline this job?', input: 'text', inputPlaceholder: 'Reason (optional)',
+                  showCancelButton: true, confirmButtonText: 'Decline', confirmButtonColor: '#dc3545' })
+        .then(r => {
+          if (!r.isConfirmed) return;
+          $.post('php/operations/driver_decline_job.php', { d_id: id, reason: r.value || '' }, function (res) {
+            Swal.fire({ icon: res.status === 'success' ? 'success' : 'info', text: res.message, timer: 1500, showConfirmButton: false });
+            if (res.status === 'success' || res.status === 'queued') setTimeout(() => location.reload(), 1600);
+          }, 'json');
+        });
+    });
+
+    // Phase 7 — End Shift handler. Refuses if there's an in-flight job.
+    $('#endShiftBtn').on('click', function () {
+      Swal.fire({
+        title: 'End your shift?',
+        text: 'Machine hours will be recorded based on start → now.',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Yes, end shift',
+        confirmButtonColor: '#dc3545',
+      }).then(r => {
+        if (!r.isConfirmed) return;
+        $.post('php/operations/end_shift.php', {}, function (res) {
+          const ok = res.status === 'success';
+          Swal.fire({
+            icon: ok ? 'success' : 'warning',
+            title: ok ? 'Shift ended' : '',
+            html: ok ? '<b>Machine hours:</b> ' + res.machine_hours : escapeStr(res.message),
+            confirmButtonColor: '#0d6efd',
+          });
+          if (ok) setTimeout(() => location.reload(), 1500);
+        }, 'json').fail(function (xhr) {
+          let msg = 'Network error';
+          try { msg = (JSON.parse(xhr.responseText) || {}).message || msg; } catch (e) {}
+          Swal.fire({ icon: 'error', text: msg });
+        });
+      });
+      function escapeStr(s){return String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+    });
+
+    // Phase 5 — Status pills.
+    $(document).on('click', '.phase5-status', function (e) {
+      e.stopPropagation();
+      const id = $(this).data('id');
+      const st = $(this).data('st');
+      const send = (lat, lng) => {
+        $.post('php/operations/driver_update_status.php', { d_id: id, status: st, lat: lat || '', lng: lng || '' }, function (res) {
+          Swal.fire({ icon: res.status === 'success' ? 'success' : (res.status === 'queued' ? 'info' : 'error'),
+                      text: res.message, timer: 1200, showConfirmButton: false });
+          if (st === 'delivered' && (res.status === 'success' || res.status === 'queued')) {
+            setTimeout(() => location.href = 'driver-pod?d_id=' + id, 1300);
+          }
+        }, 'json');
+      };
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          p => send(p.coords.latitude.toFixed(7), p.coords.longitude.toFixed(7)),
+          () => send(),
+          { enableHighAccuracy: true, timeout: 5000 }
+        );
+      } else { send(); }
     });
 
     // Fetch Stats
@@ -299,6 +520,19 @@ if (isset($_SESSION['user_type']) && $_SESSION['user_type'] === "Driver") {
     
     fetchDriverBookings();
     setInterval(fetchDriverBookings, 5000);
+
+    // Phase 5 — Chat unread dot on the bottom-nav Chat icon.
+    function pollChatUnread() {
+      $.getJSON('php/fetch/messages_unread.php', function (res) {
+        if (res.status === 'success' && parseInt(res.count, 10) > 0) {
+          $('#unreadDot').show();
+        } else {
+          $('#unreadDot').hide();
+        }
+      });
+    }
+    pollChatUnread();
+    setInterval(pollChatUnread, 10000);
 
     // SOS Function
     function sosAlert() {

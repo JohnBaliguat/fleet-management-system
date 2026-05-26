@@ -10,6 +10,8 @@ table-fetch/error_log.txt
 .env
 .env.local
 *.env
+php/config/microsoft_sso.php
+php/config/vapid.php
 
 # IDE and OS
 .idea/

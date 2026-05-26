@@ -37,12 +37,30 @@
                     <label for="pass" class="form-label">Password</label>
                     <input type="password" class="form-control" id="pass" name="pass" placeholder="Enter your password" required autocomplete="current-password">
                   </div>
-                  <button type="submit" name="login-btn" class="btn btn-primary w-100 py-3 fs-6 fw-semibold mb-4">Sign In</button>
-                  <div class="text-center pt-2">
-                    <span class="text-muted small">No account yet?</span>
-                    <a class="small fw-semibold ms-1 text-primary text-decoration-none" href="register">Create an account</a>
-                  </div>
+                  <button type="submit" name="login-btn" class="btn btn-primary w-100 py-3 fs-6 fw-semibold mb-3">Sign In</button>
                 </form>
+
+                <div class="d-flex align-items-center my-3">
+                  <div class="flex-grow-1 border-top"></div>
+                  <span class="px-3 text-muted small text-uppercase">or</span>
+                  <div class="flex-grow-1 border-top"></div>
+                </div>
+
+                <a href="ms-login" class="btn btn-outline-dark w-100 py-3 fw-semibold mb-4 d-flex align-items-center justify-content-center gap-2">
+                  <!-- Inline Microsoft 4-square logo (no external dependency). -->
+                  <svg width="20" height="20" viewBox="0 0 23 23" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                    <rect x="1"  y="1"  width="10" height="10" fill="#F35325"/>
+                    <rect x="12" y="1"  width="10" height="10" fill="#81BC06"/>
+                    <rect x="1"  y="12" width="10" height="10" fill="#05A6F0"/>
+                    <rect x="12" y="12" width="10" height="10" fill="#FFBA08"/>
+                  </svg>
+                  Sign in with Microsoft work account
+                </a>
+
+                <div class="text-center pt-2">
+                  <span class="text-muted small">No account yet?</span>
+                  <a class="small fw-semibold ms-1 text-primary text-decoration-none" href="register">Create an account</a>
+                </div>
               </div>
             </div>
           </div>
